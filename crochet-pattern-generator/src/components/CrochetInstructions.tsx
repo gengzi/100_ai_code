@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { ChevronDown, ChevronUp, Copy, Download, Printer } from 'lucide-react';
 import { CrochetInstruction, YarnColor } from '../types';
-import { exportUtils } from '../utils/exportUtils';
 
 interface CrochetInstructionsProps {
   instructions: CrochetInstruction[];

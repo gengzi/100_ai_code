@@ -1,11 +1,12 @@
-import React, { useState, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { ImageUpload } from './components/ImageUpload';
 import { PatternGrid, PatternLegend, PatternStats } from './components/PatternGrid';
 import { CrochetInstructions } from './components/CrochetInstructions';
+import { CrochetStepGenerator } from './components/CrochetStepGenerator';
 import { ExportPanel } from './components/ExportPanel';
 import { imageProcessor } from './utils/imageProcessor';
 import { crochetGenerator } from './utils/crochetGenerator';
-import { CrochetPattern, PatternSettings, ColorCell, YarnColor } from './types';
+import { CrochetPattern, PatternSettings, ColorCell } from './types';
 
 const defaultSettings: PatternSettings = {
   width: 50,
@@ -25,7 +26,7 @@ function App() {
   const [settings, setSettings] = useState<PatternSettings>(defaultSettings);
   const [pattern, setPattern] = useState<CrochetPattern | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [activeTab, setActiveTab] = useState<'grid' | 'instructions' | 'export'>('grid');
+  const [activeTab, setActiveTab] = useState<'grid' | 'instructions' | 'steps' | 'export'>('grid');
   const [showGrid, setShowGrid] = useState(true);
 
   const patternRef = useRef<HTMLDivElement>(null);
@@ -202,6 +203,16 @@ function App() {
                   编织说明
                 </button>
                 <button
+                  onClick={() => setActiveTab('steps')}
+                  className={`px-6 py-3 font-medium text-sm transition-colors ${
+                    activeTab === 'steps'
+                      ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  详细步骤
+                </button>
+                <button
                   onClick={() => setActiveTab('export')}
                   className={`px-6 py-3 font-medium text-sm transition-colors ${
                     activeTab === 'export'
@@ -254,6 +265,10 @@ function App() {
                     colors={pattern.colors}
                     patternName={pattern.name}
                   />
+                )}
+
+                {activeTab === 'steps' && (
+                  <CrochetStepGenerator pattern={pattern} />
                 )}
 
                 {activeTab === 'export' && (

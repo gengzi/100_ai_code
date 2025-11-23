@@ -125,26 +125,59 @@ export class ImageProcessor {
       }
     }
 
-    // 按频率排序并取前N个颜色
+    // 按频率排序
     const sortedColors = Array.from(colorMap.entries())
-      .sort((a, b) => b[1].count - a[1].count)
-      .slice(0, maxColors);
+      .sort((a, b) => b[1].count - a[1].count);
 
-    // 映射到最接近的毛线颜色
-    const yarnColors = sortedColors.map(([_, colorData], index) => {
+    // 映射到最接近的毛线颜色并按频率分组
+    const yarnColorGroups = new Map<string, { count: number; rgb: { r: number; g: number; b: number } }>();
+
+    sortedColors.forEach(([_, colorData]) => {
       const closestYarnColor = this.findClosestYarnColor(colorData.rgb);
-      return {
-        ...closestYarnColor,
-        id: `${closestYarnColor.id}_${index}`,
-      };
+      const existing = yarnColorGroups.get(closestYarnColor.id);
+
+      if (existing) {
+        existing.count += colorData.count;
+      } else {
+        yarnColorGroups.set(closestYarnColor.id, {
+          count: colorData.count,
+          rgb: colorData.rgb
+        });
+      }
     });
 
-    // 去重
-    const uniqueColors = yarnColors.filter((color, index, self) =>
-      index === self.findIndex(c => c.id.split('_')[0] === color.id.split('_')[0])
-    );
+    // 按频率排序并取前maxColors个最接近的毛线颜色
+    const finalColors = Array.from(yarnColorGroups.entries())
+      .sort((a, b) => b[1].count - a[1].count)
+      .slice(0, maxColors)
+      .map(([yarnColorId, _], index) => {
+        const yarnColor = YARN_COLOR_PALETTE.find(c => c.id === yarnColorId)!;
+        return {
+          ...yarnColor,
+          id: `${yarnColor.id}_${index}`,
+        };
+      });
 
-    return uniqueColors;
+    // 如果颜色不够，用最接近的剩余毛线颜色补充
+    if (finalColors.length < maxColors) {
+      const usedColorIds = new Set(finalColors.map(c => c.id.split('_')[0]));
+      const remainingColors = YARN_COLOR_PALETTE.filter(c => !usedColorIds.has(c.id));
+
+      // 按与主要颜色的平均距离排序，选择差异最大的颜色
+      const avgRgb = this.calculateAverageRgb(finalColors);
+      remainingColors.sort((a, b) =>
+        this.colorDistance(b.rgb, avgRgb) - this.colorDistance(a.rgb, avgRgb)
+      );
+
+      for (let i = finalColors.length; i < maxColors && i - finalColors.length < remainingColors.length; i++) {
+        finalColors.push({
+          ...remainingColors[i - finalColors.length],
+          id: `${remainingColors[i - finalColors.length].id}_${i}`
+        });
+      }
+    }
+
+    return finalColors.slice(0, maxColors);
   }
 
   /**
@@ -254,6 +287,10 @@ export class ImageProcessor {
     width: number,
     height: number
   ): YarnColor[][] {
+    if (colors.length === 0) {
+      throw new Error('颜色列表不能为空');
+    }
+
     const grid: YarnColor[][] = [];
     const data = imageData.data;
 
@@ -267,13 +304,24 @@ export class ImageProcessor {
         const a = data[i + 3];
 
         if (a < 128) {
-          // 透明或接近透明的像素，使用白色
-          row.push(colors[0] || YARN_COLOR_PALETTE[0]);
+          // 透明或接近透明的像素，使用第一个可用颜色
+          row.push(colors[0]);
         } else {
           const rgb = { r, g, b };
-          const closestColor = this.findClosestYarnColor(rgb);
-          const matchedColor = colors.find(c => c.id.split('_')[0] === closestColor.id);
-          row.push(matchedColor || closestColor);
+
+          // 在提供的颜色中找到最接近的颜色，不引入新颜色
+          let closestColor = colors[0];
+          let minDistance = Number.MAX_VALUE;
+
+          for (const color of colors) {
+            const distance = this.colorDistance(rgb, color.rgb);
+            if (distance < minDistance) {
+              minDistance = distance;
+              closestColor = color;
+            }
+          }
+
+          row.push(closestColor);
         }
       }
       grid.push(row);
@@ -351,6 +399,37 @@ export class ImageProcessor {
     }
 
     return neighbors;
+  }
+
+  /**
+   * 计算两个颜色之间的欧几里得距离
+   */
+  private colorDistance(color1: { r: number; g: number; b: number }, color2: { r: number; g: number; b: number }): number {
+    const dr = color1.r - color2.r;
+    const dg = color1.g - color2.g;
+    const db = color1.b - color2.b;
+    return Math.sqrt(dr * dr + dg * dg + db * db);
+  }
+
+  /**
+   * 计算一组颜色的平均RGB值
+   */
+  private calculateAverageRgb(colors: YarnColor[]): { r: number; g: number; b: number } {
+    if (colors.length === 0) {
+      return { r: 128, g: 128, b: 128 }; // 默认灰色
+    }
+
+    const sum = colors.reduce((acc, color) => ({
+      r: acc.r + color.rgb.r,
+      g: acc.g + color.rgb.g,
+      b: acc.b + color.rgb.b
+    }), { r: 0, g: 0, b: 0 });
+
+    return {
+      r: Math.round(sum.r / colors.length),
+      g: Math.round(sum.g / colors.length),
+      b: Math.round(sum.b / colors.length)
+    };
   }
 }
 

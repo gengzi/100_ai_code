@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState } from 'react';
 import { Download, Share2, Printer, Settings, Image, FileText } from 'lucide-react';
 import { CrochetPattern, ExportOptions } from '../types';
 import { exportUtils } from '../utils/exportUtils';

@@ -1,4 +1,4 @@
-import { YarnColor, CrochetInstruction, ColorChange, StitchType, ColorCell } from '../types';
+import { YarnColor, CrochetInstruction, ColorChange, StitchType } from '../types';
 
 export class CrochetGenerator {
 
@@ -37,7 +37,6 @@ export class CrochetGenerator {
   ): CrochetInstruction {
     const colorChanges: ColorChange[] = [];
     let currentColor = row[0];
-    let stitchCount = 0;
     let instructionParts: string[] = [];
 
     // 分析颜色变化
@@ -84,8 +83,7 @@ export class CrochetGenerator {
 
     return {
       row: rowNum,
-      instruction: `第${rowNum}行: ${instruction}`,
-      instructions: instruction,
+      instructions: `第${rowNum}行: ${instruction}`,
       stitchCount: stitchesPerRow,
       colorChanges
     };
@@ -140,7 +138,7 @@ export class CrochetGenerator {
 
     const instructions = this.generateInstructions(colorGrid, stitchType, stitchesPerRow);
     instructions.forEach(inst => {
-      tutorial.push(inst.instruction);
+      tutorial.push(inst.instructions);
     });
 
     // 收尾工作
@@ -184,7 +182,6 @@ export class CrochetGenerator {
     stitchSize: number = 1 // 每针的厘米数
   ): { [colorId: string]: number } {
     const usage: { [colorId: string]: number } = {};
-    const totalStitches = colorGrid.length * stitchesPerRow;
 
     // 统计每种颜色的针数
     colorGrid.forEach(row => {
