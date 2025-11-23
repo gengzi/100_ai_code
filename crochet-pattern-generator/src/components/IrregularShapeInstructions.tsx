@@ -1,5 +1,5 @@
 import React from 'react';
-import { CrochetPattern } from '../types';
+import { CrochetPattern, ColorCell } from '../types';
 
 interface IrregularShapeInstructionsProps {
   pattern: CrochetPattern;
@@ -31,27 +31,33 @@ export const IrregularShapeInstructions: React.FC<IrregularShapeInstructionsProp
         totalCells++;
         // 检查是否为透明或空白区域（基于颜色判断）
         const cell = grid[y][x];
-        const isEmpty = cell.color.hexCode === '#FFFFFF' || cell.color.name.includes('白');
+        const isEmpty = cell.color === null || cell.color.hexCode === '#FFFFFF' || cell.color.name.includes('白');
 
         if (!isEmpty) {
           nonEmptyCells++;
           // 检查是否为边缘
+          const checkEmpty = (cell: ColorCell | undefined) =>
+            cell && (cell.color === null || cell.color.hexCode === '#FFFFFF');
+
           const hasEmptyNeighbor =
-            (y > 0 && grid[y-1]?.[x] && (grid[y-1][x].color.hexCode === '#FFFFFF')) ||
-            (y < grid.length - 1 && grid[y+1]?.[x] && (grid[y+1][x].color.hexCode === '#FFFFFF')) ||
-            (x > 0 && grid[y][x-1] && (grid[y][x-1].color.hexCode === '#FFFFFF')) ||
-            (x < (grid[y]?.length || 0) - 1 && grid[y][x+1] && (grid[y][x+1].color.hexCode === '#FFFFFF'));
+            (y > 0 && checkEmpty(grid[y-1]?.[x])) ||
+            (y < grid.length - 1 && checkEmpty(grid[y+1]?.[x])) ||
+            (x > 0 && checkEmpty(grid[y][x-1])) ||
+            (x < (grid[y]?.length || 0) - 1 && checkEmpty(grid[y][x+1]));
 
           if (hasEmptyNeighbor) {
             shapeInfo.irregularEdges.push(y * pattern.width + x);
           }
         } else {
           // 检测空心区域
+          const checkNonEmpty = (cell: ColorCell | undefined) =>
+            cell && cell.color !== null && cell.color.hexCode !== '#FFFFFF';
+
           const hasNonEmptyNeighbor =
-            (y > 0 && grid[y-1]?.[x] && (grid[y-1][x].color.hexCode !== '#FFFFFF')) ||
-            (y < grid.length - 1 && grid[y+1]?.[x] && (grid[y+1][x].color.hexCode !== '#FFFFFF')) ||
-            (x > 0 && grid[y][x-1] && (grid[y][x-1].color.hexCode !== '#FFFFFF')) ||
-            (x < (grid[y]?.length || 0) - 1 && grid[y][x+1] && (grid[y][x+1].color.hexCode !== '#FFFFFF'));
+            (y > 0 && checkNonEmpty(grid[y-1]?.[x])) ||
+            (y < grid.length - 1 && checkNonEmpty(grid[y+1]?.[x])) ||
+            (x > 0 && checkNonEmpty(grid[y][x-1])) ||
+            (x < (grid[y]?.length || 0) - 1 && checkNonEmpty(grid[y][x+1]));
 
           if (hasNonEmptyNeighbor) {
             shapeInfo.hollowAreas.push({ x, y, width: 1, height: 1 });

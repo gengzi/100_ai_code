@@ -23,8 +23,8 @@ export interface YarnColor {
 export interface ColorCell {
   x: number;
   y: number;
-  color: YarnColor;
-  stitchType: StitchType;
+  color: YarnColor | null;
+  stitchType: StitchType | null;
 }
 
 export type StitchType =

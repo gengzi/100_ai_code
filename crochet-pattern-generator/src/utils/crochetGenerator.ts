@@ -7,7 +7,7 @@ export class CrochetGenerator {
    * 生成增强的编织指令
    */
   generateInstructions(
-    colorGrid: YarnColor[][],
+    colorGrid: (YarnColor | null)[][],
     settings: PatternSettings
   ): CrochetInstruction[] {
     const instructions: CrochetInstruction[] = [];
@@ -186,16 +186,25 @@ export class CrochetGenerator {
   /**
    * 分析图片复杂度
    */
-  private analyzeImageComplexity(colorGrid: YarnColor[][]): 'simple' | 'moderate' | 'complex' {
+  private analyzeImageComplexity(colorGrid: (YarnColor | null)[][]): 'simple' | 'moderate' | 'complex' {
     let colorChanges = 0;
     let totalCells = 0;
 
     for (let y = 0; y < colorGrid.length; y++) {
       for (let x = 0; x < colorGrid[y].length; x++) {
+        const currentColor = colorGrid[y][x];
+        if (currentColor === null) continue; // 跳过透明像素
+
         totalCells++;
         // 检查相邻颜色变化
-        if (x > 0 && colorGrid[y][x].id !== colorGrid[y][x - 1].id) colorChanges++;
-        if (y > 0 && colorGrid[y][x].id !== colorGrid[y - 1][x].id) colorChanges++;
+        if (x > 0) {
+          const prevColor = colorGrid[y][x - 1];
+          if (prevColor !== null && currentColor.id !== prevColor.id) colorChanges++;
+        }
+        if (y > 0) {
+          const prevColor = colorGrid[y - 1][x];
+          if (prevColor !== null && currentColor.id !== prevColor.id) colorChanges++;
+        }
       }
     }
 
@@ -210,7 +219,7 @@ export class CrochetGenerator {
    * 生成增强的单行指令
    */
   private generateEnhancedRowInstruction(
-    colorGrid: YarnColor[][],
+    colorGrid: (YarnColor | null)[][],
     rowNum: number,
     settings: PatternSettings,
     stitchRecommendation: any,
@@ -219,15 +228,37 @@ export class CrochetGenerator {
     const row = colorGrid[rowNum - 1];
     const colorChanges: ColorChange[] = [];
     const stitchTypes: StitchDetail[] = [];
-    let currentColor = row[0]!;
+
+    // 找到第一个非透明的颜色作为起始颜色
+    let currentColor: YarnColor | null = null;
+    for (let i = 0; i < row.length; i++) {
+      if (row[i] !== null) {
+        currentColor = row[i];
+        break;
+      }
+    }
+
+    // 如果整行都是透明的，返回空指令
+    if (currentColor === null) {
+      return {
+        row: rowNum,
+        instructions: '跳过此行（透明区域）',
+        stitchCount: 0,
+        colorChanges: [],
+        stitchTypes: [],
+        notes: ['整行透明，无需钩织']
+      };
+    }
+
     let currentStitchType = stitchRecommendation.primaryStitch;
     let currentStitchCount = 0;
     let instructionParts: string[] = [];
     let stitchPosition = 0;
 
-    // 分析颜色变化和针法选择
+    // 分析颜色变化和针法选择，跳过透明像素
     for (let i = 0; i < settings.stitchesPerRow && i < row.length; i++) {
-      const color = row[i]!;
+      const color = row[i];
+      if (color === null) continue; // 跳过透明像素
 
       // 检测颜色变化
       if (color.id !== currentColor.id) {
@@ -316,7 +347,7 @@ export class CrochetGenerator {
    * 智能选择最优针法
    */
   private selectOptimalStitch(
-    _row: YarnColor[],
+    _row: (YarnColor | null)[],
     position: number,
     availableStitches: StitchType[],
     secondaryStitches?: StitchType[]

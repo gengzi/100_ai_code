@@ -65,7 +65,10 @@ export class ImageProcessor {
     this.ctx.drawImage(img, 0, 0, width, height);
 
     // 获取图像数据
-    const imageData = this.ctx.getImageData(0, 0, width, height);
+    let imageData = this.ctx.getImageData(0, 0, width, height);
+
+    // 检测并处理PNG透明度
+    imageData = this.processTransparency(imageData);
 
     // 提取颜色
     const extractedColors = this.extractColors(imageData, settings.maxColors, settings.removeBlackLines);
@@ -77,6 +80,42 @@ export class ImageProcessor {
       width,
       height,
     };
+  }
+
+  /**
+   * 处理图片透明度，将透明区域设为白色背景
+   */
+  private processTransparency(imageData: ImageData): ImageData {
+    const data = imageData.data;
+    const width = imageData.width;
+    const height = imageData.height;
+
+    // 创建新的图像数据
+    const newImageData = new ImageData(width, height);
+    const newData = newImageData.data;
+
+    for (let i = 0; i < data.length; i += 4) {
+      const r = data[i];
+      const g = data[i + 1];
+      const b = data[i + 2];
+      const a = data[i + 3]; // 透明度
+
+      if (a < 128) {
+        // 透明或半透明像素，设为白色背景
+        newData[i] = 255;     // R
+        newData[i + 1] = 255; // G
+        newData[i + 2] = 255; // B
+        newData[i + 3] = 255; // A (不透明)
+      } else {
+        // 不透明像素，保持原色
+        newData[i] = r;
+        newData[i + 1] = g;
+        newData[i + 2] = b;
+        newData[i + 3] = a;
+      }
+    }
+
+    return newImageData;
   }
 
   /**
@@ -281,23 +320,23 @@ export class ImageProcessor {
   }
 
   /**
-   * 将图像数据转换为颜色网格
+   * 将图像数据转换为颜色网格，透明像素返回null表示跳过钩织
    */
   createColorGrid(
     imageData: ImageData,
     colors: YarnColor[],
     width: number,
     height: number
-  ): YarnColor[][] {
+  ): (YarnColor | null)[][] {
     if (colors.length === 0) {
       throw new Error('颜色列表不能为空');
     }
 
-    const grid: YarnColor[][] = [];
+    const grid: (YarnColor | null)[][] = [];
     const data = imageData.data;
 
     for (let y = 0; y < height; y++) {
-      const row: YarnColor[] = [];
+      const row: (YarnColor | null)[] = [];
       for (let x = 0; x < width; x++) {
         const i = (y * width + x) * 4;
         const r = data[i];
@@ -305,13 +344,16 @@ export class ImageProcessor {
         const b = data[i + 2];
         const a = data[i + 3];
 
-        if (a < 128) {
-          // 透明或接近透明的像素，使用第一个可用颜色
-          row.push(colors[0]);
+        // 检查是否为透明区域或白色背景
+        const isTransparent = a < 128;
+
+        if (isTransparent) {
+          // 透明像素 - 跳过钩织
+          row.push(null);
         } else {
           const rgb = { r, g, b };
 
-          // 在提供的颜色中找到最接近的颜色，不引入新颜色
+          // 在提供的颜色中找到最接近的颜色
           let closestColor = colors[0];
           let minDistance = Number.MAX_VALUE;
 
@@ -336,28 +378,36 @@ export class ImageProcessor {
    * 简化颜色网格（减少颜色变化）
    */
   simplifyColorGrid(
-    grid: YarnColor[][],
+    grid: (YarnColor | null)[][],
     colors: YarnColor[],
     simplificationLevel: number
-  ): YarnColor[][] {
+  ): (YarnColor | null)[][] {
     if (simplificationLevel === 0) return grid;
 
     const height = grid.length;
     const width = grid[0]?.length || 0;
-    const simplified: YarnColor[][] = [];
+    const simplified: (YarnColor | null)[][] = [];
 
     for (let y = 0; y < height; y++) {
       simplified[y] = [];
       for (let x = 0; x < width; x++) {
         let color = grid[y][x];
 
+        // 如果是透明像素，直接跳过
+        if (color === null) {
+          simplified[y][x] = null;
+          continue;
+        }
+
         // 检查周围的像素
         const neighbors = this.getNeighbors(grid, x, y);
         const colorCounts = new Map<string, number>();
 
         neighbors.forEach(neighbor => {
-          const key = neighbor.id;
-          colorCounts.set(key, (colorCounts.get(key) || 0) + 1);
+          if (neighbor !== null) {
+            const key = neighbor.id;
+            colorCounts.set(key, (colorCounts.get(key) || 0) + 1);
+          }
         });
 
         // 如果周围有更常见的颜色，且有足够的简化程度，则采用
@@ -366,7 +416,6 @@ export class ImageProcessor {
 
         if (sortedColors.length > 1 && sortedColors[0][1] > neighbors.length * simplificationLevel) {
           const dominantColorId = sortedColors[0][0];
-          color = grid[y][x];
           // 简化逻辑：如果当前颜色不是主导颜色，则改为主导颜色
           if (color.id.split('_')[0] !== dominantColorId) {
             const dominantColor = colors.find(c => c.id.split('_')[0] === dominantColorId);
@@ -381,8 +430,8 @@ export class ImageProcessor {
     return simplified;
   }
 
-  private getNeighbors(grid: YarnColor[][], x: number, y: number): YarnColor[] {
-    const neighbors: YarnColor[] = [];
+  private getNeighbors(grid: (YarnColor | null)[][], x: number, y: number): (YarnColor | null)[] {
+    const neighbors: (YarnColor | null)[] = [];
     const height = grid.length;
     const width = grid[0]?.length || 0;
 

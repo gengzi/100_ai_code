@@ -83,14 +83,20 @@ function App() {
 
       // 转换为ColorCell格式，根据图片特征智能分配针法
       const grid: ColorCell[][] = optimizedGrid.map((row, y) =>
-        row.map((color, x) => ({
-          x,
-          y,
-          color,
-          stitchType: newSettings.mixedStitches
-            ? getOptimalStitchForPosition(optimizedGrid, x, y, imageAnalysis)
-            : optimizedSettings.stitchType
-        }))
+        row.map((color, x) => {
+          const stitchType = color === null
+            ? null
+            : newSettings.mixedStitches
+              ? getOptimalStitchForPosition(optimizedGrid, x, y, imageAnalysis)
+              : optimizedSettings.stitchType;
+
+          return {
+            x,
+            y,
+            color,
+            stitchType
+          };
+        })
       );
 
       // 生成增强的编织说明
@@ -124,26 +130,21 @@ function App() {
     }
   };
 
-  // 动态计算每行针数并分析形状特征
-  const calculateDynamicStitchesPerRow = (colorGrid: YarnColor[][]): number => {
+  // 动态计算每行针数并分析形状特征（考虑透明区域）
+  const calculateDynamicStitchesPerRow = (colorGrid: (YarnColor | null)[][]): number => {
     if (colorGrid.length === 0) return 20;
 
     let maxStitches = 0;
-    const backgroundColor = { r: 255, g: 255, b: 255 }; // 假设白色为背景
 
     for (let y = 0; y < colorGrid.length; y++) {
       let rowStitches = 0;
       for (let x = 0; x < colorGrid[y].length; x++) {
         const color = colorGrid[y][x];
-        // 计算与背景色的差异
-        const diff = Math.sqrt(
-          Math.pow(color.rgb.r - backgroundColor.r, 2) +
-          Math.pow(color.rgb.g - backgroundColor.g, 2) +
-          Math.pow(color.rgb.b - backgroundColor.b, 2)
-        );
 
-        // 如果不是背景色，则计为一针
-        if (diff > 30) {
+        // 检查是否为实际的内容（非透明像素）
+        const isContent = color !== null;
+
+        if (isContent) {
           rowStitches++;
         }
       }
@@ -155,14 +156,13 @@ function App() {
   };
 
   // 分析图片特征并自动匹配最适合的针法
-  const analyzeImageForOptimalStitch = (colorGrid: YarnColor[][]): {
+  const analyzeImageForOptimalStitch = (colorGrid: (YarnColor | null)[][]): {
     primaryStitch: any;
     shapeType: 'simple' | 'organic' | 'geometric' | 'complex';
     recommendedStitches: string[];
     difficulty: 'easy' | 'medium' | 'hard';
     analysis: string;
   } => {
-    const backgroundColor = { r: 255, g: 255, b: 255 };
     let edgePixels = 0;
     let totalPixels = 0;
     let colorChanges = 0;
@@ -174,68 +174,48 @@ function App() {
     for (let y = 0; y < colorGrid.length; y++) {
       for (let x = 0; x < colorGrid[y].length; x++) {
         const color = colorGrid[y][x];
-        const diff = Math.sqrt(
-          Math.pow(color.rgb.r - backgroundColor.r, 2) +
-          Math.pow(color.rgb.g - backgroundColor.g, 2) +
-          Math.pow(color.rgb.b - backgroundColor.b, 2)
-        );
 
-        // 统计非背景像素
-        if (diff > 30) {
+        // 检查是否为实际内容（非透明像素）
+        const isContent = color !== null;
+
+        if (isContent) {
           totalPixels++;
-          uniqueColors.add(`${color.rgb.r},${color.rgb.g},${color.rgb.b}`);
+          uniqueColors.add(`${color!.rgb.r},${color!.rgb.g},${color!.rgb.b}`);
 
-          // 检查是否为边缘
+          // 检查是否为边缘（与透明像素相邻）
           const isEdge =
-            (x > 0 && Math.sqrt(
-              Math.pow(colorGrid[y][x-1].rgb.r - backgroundColor.r, 2) +
-              Math.pow(colorGrid[y][x-1].rgb.g - backgroundColor.g, 2) +
-              Math.pow(colorGrid[y][x-1].rgb.b - backgroundColor.b, 2)
-            ) <= 30) ||
-            (x < colorGrid[y].length - 1 && Math.sqrt(
-              Math.pow(colorGrid[y][x+1].rgb.r - backgroundColor.r, 2) +
-              Math.pow(colorGrid[y][x+1].rgb.g - backgroundColor.g, 2) +
-              Math.pow(colorGrid[y][x+1].rgb.b - backgroundColor.b, 2)
-            ) <= 30) ||
-            (y > 0 && Math.sqrt(
-              Math.pow(colorGrid[y-1][x].rgb.r - backgroundColor.r, 2) +
-              Math.pow(colorGrid[y-1][x].rgb.g - backgroundColor.g, 2) +
-              Math.pow(colorGrid[y-1][x].rgb.b - backgroundColor.b, 2)
-            ) <= 30) ||
-            (y < colorGrid.length - 1 && Math.sqrt(
-              Math.pow(colorGrid[y+1][x].rgb.r - backgroundColor.r, 2) +
-              Math.pow(colorGrid[y+1][x].rgb.g - backgroundColor.g, 2) +
-              Math.pow(colorGrid[y+1][x].rgb.b - backgroundColor.b, 2)
-            ) <= 30);
+            (x > 0 && colorGrid[y][x-1] === null) ||
+            (x < colorGrid[y].length - 1 && colorGrid[y][x+1] === null) ||
+            (y > 0 && colorGrid[y-1][x] === null) ||
+            (y < colorGrid.length - 1 && colorGrid[y+1][x] === null);
 
           if (isEdge) edgePixels++;
 
           // 检测颜色变化（细节程度）
           if (x > 0) {
-            const prevColorDiff = Math.sqrt(
-              Math.pow(color.rgb.r - colorGrid[y][x-1].rgb.r, 2) +
-              Math.pow(color.rgb.g - colorGrid[y][x-1].rgb.g, 2) +
-              Math.pow(color.rgb.b - colorGrid[y][x-1].rgb.b, 2)
-            );
-            if (prevColorDiff > 30) {
-              colorChanges++;
-              detailLevel += Math.min(prevColorDiff / 100, 1);
+            const prevColor = colorGrid[y][x-1];
+            const prevIsContent = prevColor !== null;
+
+            if (prevIsContent) {
+              const colorDiff = Math.sqrt(
+                Math.pow(color!.rgb.r - prevColor!.rgb.r, 2) +
+                Math.pow(color!.rgb.g - prevColor!.rgb.g, 2) +
+                Math.pow(color!.rgb.b - prevColor!.rgb.b, 2)
+              );
+              if (colorDiff > 30) {
+                colorChanges++;
+                detailLevel += Math.min(colorDiff / 100, 1);
+              }
             }
           }
         } else if (y > 0 && y < colorGrid.length - 1 && x > 0 && x < colorGrid[y].length - 1) {
-          // 检测空心区域
+          // 检测空心区域（被内容包围的透明区域）
           const neighbors = [
             colorGrid[y-1][x], colorGrid[y+1][x],
             colorGrid[y][x-1], colorGrid[y][x+1]
           ];
-          const hasNonEmptyNeighbor = neighbors.some(neighbor =>
-            Math.sqrt(
-              Math.pow(neighbor.rgb.r - backgroundColor.r, 2) +
-              Math.pow(neighbor.rgb.g - backgroundColor.g, 2) +
-              Math.pow(neighbor.rgb.b - backgroundColor.b, 2)
-            ) > 30
-          );
-          if (hasNonEmptyNeighbor) hollowAreas++;
+          const hasContentNeighbor = neighbors.some(neighbor => neighbor !== null);
+          if (hasContentNeighbor) hollowAreas++;
         }
       }
     }
@@ -330,7 +310,7 @@ function App() {
   };
 
   // 优化网格，去除空白边缘
-  const optimizeGridForIrregularShape = (colorGrid: YarnColor[][]): YarnColor[][] => {
+  const optimizeGridForIrregularShape = (colorGrid: (YarnColor | null)[][]): (YarnColor | null)[][] => {
     if (colorGrid.length === 0) return [];
 
     const backgroundColor = { r: 255, g: 255, b: 255 };
@@ -340,6 +320,10 @@ function App() {
     for (let y = 0; y < colorGrid.length; y++) {
       for (let x = 0; x < colorGrid[y].length; x++) {
         const color = colorGrid[y][x];
+
+        // 跳过透明像素
+        if (color === null) continue;
+
         const diff = Math.sqrt(
           Math.pow(color.rgb.r - backgroundColor.r, 2) +
           Math.pow(color.rgb.g - backgroundColor.g, 2) +
@@ -367,9 +351,9 @@ function App() {
     minY = Math.max(0, minY - padding);
     maxY = Math.min(colorGrid.length - 1, maxY + padding);
 
-    const optimizedGrid: YarnColor[][] = [];
+    const optimizedGrid: (YarnColor | null)[][] = [];
     for (let y = minY; y <= maxY; y++) {
-      const row: YarnColor[] = [];
+      const row: (YarnColor | null)[] = [];
       for (let x = minX; x <= maxX; x++) {
         row.push(colorGrid[y][x]);
       }
@@ -379,45 +363,24 @@ function App() {
     return optimizedGrid;
   };
 
-  // 根据位置和图片分析为每个位置选择最优针法
+  // 根据位置和图片分析为每个位置选择最优针法（优化透明区域处理）
   const getOptimalStitchForPosition = (
-    grid: YarnColor[][],
+    grid: (YarnColor | null)[][],
     x: number,
     y: number,
     imageAnalysis: any
   ): any => {
-    const backgroundColor = { r: 255, g: 255, b: 255 };
     const currentColor = grid[y][x];
-    const isBackground = Math.sqrt(
-      Math.pow(currentColor.rgb.r - backgroundColor.r, 2) +
-      Math.pow(currentColor.rgb.g - backgroundColor.g, 2) +
-      Math.pow(currentColor.rgb.b - backgroundColor.b, 2)
-    ) <= 30;
 
-    if (isBackground) return 'single';
+    // 检查是否为透明像素，跳过钩织
+    if (currentColor === null) return null;
 
-    // 检查是否为边缘
+    // 检查是否为边缘（与透明像素相邻）
     const isEdge = (x === 0 || x === grid[0].length - 1 || y === 0 || y === grid.length - 1) ||
-      (x > 0 && Math.sqrt(
-        Math.pow(grid[y][x-1].rgb.r - backgroundColor.r, 2) +
-        Math.pow(grid[y][x-1].rgb.g - backgroundColor.g, 2) +
-        Math.pow(grid[y][x-1].rgb.b - backgroundColor.b, 2)
-      ) <= 30) ||
-      (x < grid[0].length - 1 && Math.sqrt(
-        Math.pow(grid[y][x+1].rgb.r - backgroundColor.r, 2) +
-        Math.pow(grid[y][x+1].rgb.g - backgroundColor.g, 2) +
-        Math.pow(grid[y][x+1].rgb.b - backgroundColor.b, 2)
-      ) <= 30) ||
-      (y > 0 && Math.sqrt(
-        Math.pow(grid[y-1][x].rgb.r - backgroundColor.r, 2) +
-        Math.pow(grid[y-1][x].rgb.g - backgroundColor.g, 2) +
-        Math.pow(grid[y-1][x].rgb.b - backgroundColor.b, 2)
-      ) <= 30) ||
-      (y < grid.length - 1 && Math.sqrt(
-        Math.pow(grid[y+1][x].rgb.r - backgroundColor.r, 2) +
-        Math.pow(grid[y+1][x].rgb.g - backgroundColor.g, 2) +
-        Math.pow(grid[y+1][x].rgb.b - backgroundColor.b, 2)
-      ) <= 30);
+      (x > 0 && grid[y][x-1] === null) ||
+      (x < grid[0].length - 1 && grid[y][x+1] === null) ||
+      (y > 0 && grid[y-1][x] === null) ||
+      (y < grid.length - 1 && grid[y+1][x] === null);
 
     const { shapeType, recommendedStitches, primaryStitch } = imageAnalysis;
 

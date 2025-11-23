@@ -40,16 +40,19 @@ export const CrochetStepGenerator: React.FC<CrochetStepGeneratorProps> = ({
     for (let row = 0; row < pattern.height; row++) {
       const stitches: StitchStep[] = [];
       const stitchCount: { [colorId: string]: number } = {};
-      let currentColor = pattern.grid[row][0]?.color;
+      let currentColor = pattern.grid[row][0]?.color || null;
       let isColorChange = false;
 
       // 分析每一行的针目
       for (let col = 0; col < pattern.width; col++) {
         const cell = pattern.grid[row][col];
-        if (!cell) continue;
+        if (!cell || cell.color === null) continue;
 
         // 检查是否换线
-        isColorChange = cell.color.id !== currentColor.id;
+        isColorChange = currentColor === null || cell.color.id !== currentColor.id;
+        if (isColorChange) {
+          currentColor = cell.color;
+        }
 
         // 统计颜色针数
         stitchCount[cell.color.id] = (stitchCount[cell.color.id] || 0) + 1;

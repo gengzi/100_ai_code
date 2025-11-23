@@ -46,6 +46,9 @@ export const PatternGrid: React.FC<PatternGridProps> = ({
 
     pattern.grid.forEach((row, y) => {
       row.forEach((cell, x) => {
+        // 跳过透明像素
+        if (cell.color === null) return;
+
         const xPos = offsetX + x * cellSize;
         const yPos = offsetY + y * cellSize;
 
@@ -54,7 +57,7 @@ export const PatternGrid: React.FC<PatternGridProps> = ({
         ctx.fillRect(xPos, yPos, cellSize, cellSize);
 
         // 绘制针法符号
-        if (showStitchSymbols) {
+        if (showStitchSymbols && cell.stitchType !== null && cell.color !== null) {
           drawStitchSymbol(ctx, xPos, yPos, cellSize, cell.stitchType, cell.color);
         }
       });
