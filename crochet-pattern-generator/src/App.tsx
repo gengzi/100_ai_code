@@ -3,19 +3,26 @@ import { ImageUpload } from './components/ImageUpload';
 import { PatternGrid, PatternLegend, PatternStats } from './components/PatternGrid';
 import { CrochetInstructions } from './components/CrochetInstructions';
 import { CrochetStepGenerator } from './components/CrochetStepGenerator';
+import { IrregularShapeInstructions } from './components/IrregularShapeInstructions';
 import { ExportPanel } from './components/ExportPanel';
 import { imageProcessor } from './utils/imageProcessor';
 import { crochetGenerator } from './utils/crochetGenerator';
-import { CrochetPattern, PatternSettings, ColorCell } from './types';
+import { CrochetPattern, PatternSettings, ColorCell, YarnColor } from './types';
 
 const defaultSettings: PatternSettings = {
   width: 50,
   height: 50,
-  stitchesPerRow: 20,
+  stitchesPerRow: 20, // 这个值将被动态计算覆盖
   maxColors: 8,
   colorSimplification: 0.3,
   stitchType: 'single',
   removeBlackLines: true, // 默认开启黑色线条移除
+  // 新增钩织设置
+  autoStitchPattern: true,  // 启用智能针法选择
+  mixedStitches: true,      // 启用混合针法
+  difficulty: 'easy',       // 使用简单模式
+  showSymbols: true,        // 默认显示符号
+  showColorChangeMarkers: true, // 默认显示换线标记
   gauge: {
     stitchesPerInch: 4,
     rowsPerInch: 4
@@ -26,7 +33,8 @@ function App() {
   const [settings, setSettings] = useState<PatternSettings>(defaultSettings);
   const [pattern, setPattern] = useState<CrochetPattern | null>(null);
   const [isGenerating, setIsGenerating] = useState(false);
-  const [activeTab, setActiveTab] = useState<'grid' | 'instructions' | 'steps' | 'export'>('grid');
+  const [activeTab, setActiveTab] = useState<'grid' | 'instructions' | 'steps' | 'irregular' | 'export'>('grid');
+  const [imageAnalysisResult, setImageAnalysisResult] = useState<any>(null);
   const [showGrid, setShowGrid] = useState(true);
 
   const patternRef = useRef<HTMLDivElement>(null);
@@ -55,38 +63,52 @@ function App() {
         );
       }
 
-      // 转换为ColorCell格式
-      const grid: ColorCell[][] = colorGrid.map((row, y) =>
+      // 分析形状特征并生成智能针法推荐
+      const shapeAnalysis = analyzeShapeForStitches(colorGrid);
+
+      // 动态计算每行的实际针数（基于实际有效像素）
+      const dynamicStitchesPerRow = calculateDynamicStitchesPerRow(colorGrid);
+
+      // 创建优化的颜色网格（去除空白边缘）
+      const optimizedGrid = optimizeGridForIrregularShape(colorGrid);
+
+      // 使用分析出的推荐针法更新设置
+      const optimizedSettings = {
+        ...newSettings,
+        stitchesPerRow: dynamicStitchesPerRow,
+        difficulty: shapeAnalysis.difficulty,
+        // 如果启用了自动针法选择，使用第一个推荐针法作为主要针法
+        stitchType: newSettings.autoStitchPattern && shapeAnalysis.recommendedStitches.length > 0
+          ? shapeAnalysis.recommendedStitches[0] as any
+          : newSettings.stitchType
+      };
+
+      // 转换为ColorCell格式，根据形状类型智能分配针法
+      const grid: ColorCell[][] = optimizedGrid.map((row, y) =>
         row.map((color, x) => ({
           x,
           y,
           color,
-          stitchType: newSettings.stitchType
+          stitchType: newSettings.mixedStitches
+            ? getOptimalStitchForPosition(optimizedGrid, x, y, shapeAnalysis)
+            : optimizedSettings.stitchType
         }))
       );
 
-      // 生成编织说明
+      // 生成增强的编织说明
       const instructions = crochetGenerator.generateInstructions(
-        colorGrid,
-        newSettings.stitchType,
-        newSettings.stitchesPerRow
+        optimizedGrid,
+        optimizedSettings
       );
-
-      // 重新提取简化后的颜色
-      const uniqueColors = Array.from(new Set(
-        colorGrid.flat().map(color => color.id)
-      )).map(id => {
-        return imageResult.extractedColors.find(c => c.id === id) || imageResult.extractedColors[0];
-      });
 
       // 创建图解对象
       const newPattern: CrochetPattern = {
         id: Date.now().toString(),
         name: file.name.split('.')[0] || '钩针图解',
-        width: newSettings.width,
-        height: newSettings.height,
-        stitchesPerRow: newSettings.stitchesPerRow,
-        colors: uniqueColors,
+        width: optimizedGrid[0]?.length || newSettings.width,
+        height: optimizedGrid.length,
+        stitchesPerRow: dynamicStitchesPerRow,
+        colors: imageResult.extractedColors,
         grid,
         instructions,
         createdAt: new Date(),
@@ -94,6 +116,7 @@ function App() {
       };
 
       setPattern(newPattern);
+      setImageAnalysisResult(imageResult.analysisResult);
       setActiveTab('grid');
     } catch (error) {
       console.error('生成图解失败:', error);
@@ -103,8 +126,284 @@ function App() {
     }
   };
 
+  // 动态计算每行针数并分析形状特征
+  const calculateDynamicStitchesPerRow = (colorGrid: YarnColor[][]): number => {
+    if (colorGrid.length === 0) return 20;
+
+    let maxStitches = 0;
+    const backgroundColor = { r: 255, g: 255, b: 255 }; // 假设白色为背景
+
+    for (let y = 0; y < colorGrid.length; y++) {
+      let rowStitches = 0;
+      for (let x = 0; x < colorGrid[y].length; x++) {
+        const color = colorGrid[y][x];
+        // 计算与背景色的差异
+        const diff = Math.sqrt(
+          Math.pow(color.rgb.r - backgroundColor.r, 2) +
+          Math.pow(color.rgb.g - backgroundColor.g, 2) +
+          Math.pow(color.rgb.b - backgroundColor.b, 2)
+        );
+
+        // 如果不是背景色，则计为一针
+        if (diff > 30) {
+          rowStitches++;
+        }
+      }
+      maxStitches = Math.max(maxStitches, rowStitches);
+    }
+
+    // 确保针数在合理范围内
+    return Math.max(5, Math.min(50, Math.round(maxStitches * 1.1))); // 留10%余量
+  };
+
+  // 分析形状并生成智能针法推荐
+  const analyzeShapeForStitches = (colorGrid: YarnColor[][]): {
+    shapeType: 'simple' | 'organic' | 'geometric' | 'complex';
+    recommendedStitches: string[];
+    difficulty: 'easy' | 'medium' | 'hard';
+  } => {
+    const backgroundColor = { r: 255, g: 255, b: 255 };
+    let edgePixels = 0;
+    let totalPixels = 0;
+    let colorChanges = 0;
+    let hollowAreas = 0;
+
+    for (let y = 0; y < colorGrid.length; y++) {
+      for (let x = 0; x < colorGrid[y].length; x++) {
+        const color = colorGrid[y][x];
+        const diff = Math.sqrt(
+          Math.pow(color.rgb.r - backgroundColor.r, 2) +
+          Math.pow(color.rgb.g - backgroundColor.g, 2) +
+          Math.pow(color.rgb.b - backgroundColor.b, 2)
+        );
+
+        if (diff > 30) {
+          totalPixels++;
+
+          // 检查是否为边缘
+          const isEdge =
+            (x > 0 && Math.sqrt(
+              Math.pow(colorGrid[y][x-1].rgb.r - backgroundColor.r, 2) +
+              Math.pow(colorGrid[y][x-1].rgb.g - backgroundColor.g, 2) +
+              Math.pow(colorGrid[y][x-1].rgb.b - backgroundColor.b, 2)
+            ) <= 30) ||
+            (x < colorGrid[y].length - 1 && Math.sqrt(
+              Math.pow(colorGrid[y][x+1].rgb.r - backgroundColor.r, 2) +
+              Math.pow(colorGrid[y][x+1].rgb.g - backgroundColor.g, 2) +
+              Math.pow(colorGrid[y][x+1].rgb.b - backgroundColor.b, 2)
+            ) <= 30) ||
+            (y > 0 && Math.sqrt(
+              Math.pow(colorGrid[y-1][x].rgb.r - backgroundColor.r, 2) +
+              Math.pow(colorGrid[y-1][x].rgb.g - backgroundColor.g, 2) +
+              Math.pow(colorGrid[y-1][x].rgb.b - backgroundColor.b, 2)
+            ) <= 30) ||
+            (y < colorGrid.length - 1 && Math.sqrt(
+              Math.pow(colorGrid[y+1][x].rgb.r - backgroundColor.r, 2) +
+              Math.pow(colorGrid[y+1][x].rgb.g - backgroundColor.g, 2) +
+              Math.pow(colorGrid[y+1][x].rgb.b - backgroundColor.b, 2)
+            ) <= 30);
+
+          if (isEdge) edgePixels++;
+
+          // 检测颜色变化
+          if (x > 0) {
+            const prevColorDiff = Math.sqrt(
+              Math.pow(color.rgb.r - colorGrid[y][x-1].rgb.r, 2) +
+              Math.pow(color.rgb.g - colorGrid[y][x-1].rgb.g, 2) +
+              Math.pow(color.rgb.b - colorGrid[y][x-1].rgb.b, 2)
+            );
+            if (prevColorDiff > 50) colorChanges++;
+          }
+        } else if (y > 0 && y < colorGrid.length - 1 && x > 0 && x < colorGrid[y].length - 1) {
+          // 检测空心区域
+          const neighbors = [
+            colorGrid[y-1][x], colorGrid[y+1][x],
+            colorGrid[y][x-1], colorGrid[y][x+1]
+          ];
+          const hasNonEmptyNeighbor = neighbors.some(neighbor =>
+            Math.sqrt(
+              Math.pow(neighbor.rgb.r - backgroundColor.r, 2) +
+              Math.pow(neighbor.rgb.g - backgroundColor.g, 2) +
+              Math.pow(neighbor.rgb.b - backgroundColor.b, 2)
+            ) > 30
+          );
+          if (hasNonEmptyNeighbor) hollowAreas++;
+        }
+      }
+    }
+
+    const edgeRatio = edgePixels / totalPixels;
+    const colorChangeRatio = colorChanges / totalPixels;
+    const hollowRatio = hollowAreas / (colorGrid.length * colorGrid[0].length);
+
+    // 判断形状类型
+    let shapeType: 'simple' | 'organic' | 'geometric' | 'complex';
+    if (edgeRatio > 0.4 || hollowRatio > 0.1) {
+      shapeType = 'organic';
+    } else if (edgeRatio > 0.2 || colorChangeRatio > 0.3) {
+      shapeType = 'complex';
+    } else if (hollowRatio > 0.05) {
+      shapeType = 'geometric';
+    } else {
+      shapeType = 'simple';
+    }
+
+    // 推荐针法
+    const recommendedStitches: string[] = ['single']; // 基础针法
+
+    if (shapeType === 'organic') {
+      recommendedStitches.push('double', 'increase', 'decrease');
+    } else if (shapeType === 'geometric') {
+      recommendedStitches.push('half-double', 'slip', 'chain');
+    } else if (shapeType === 'complex') {
+      recommendedStitches.push('double', 'shell', 'bobble');
+    }
+
+    // 根据颜色变化添加更多针法
+    if (colorChangeRatio > 0.2) {
+      recommendedStitches.push('front-post', 'back-post');
+    }
+
+    // 确定难度
+    const complexityScore = edgeRatio + colorChangeRatio + hollowRatio;
+    let difficulty: 'easy' | 'medium' | 'hard';
+    if (complexityScore < 0.2) {
+      difficulty = 'easy';
+    } else if (complexityScore < 0.5) {
+      difficulty = 'medium';
+    } else {
+      difficulty = 'hard';
+    }
+
+    return {
+      shapeType,
+      recommendedStitches: [...new Set(recommendedStitches)], // 去重
+      difficulty
+    };
+  };
+
+  // 优化网格，去除空白边缘
+  const optimizeGridForIrregularShape = (colorGrid: YarnColor[][]): YarnColor[][] => {
+    if (colorGrid.length === 0) return [];
+
+    const backgroundColor = { r: 255, g: 255, b: 255 };
+    let minX = colorGrid[0].length, maxX = 0, minY = colorGrid.length, maxY = 0;
+
+    // 找到有效区域的边界
+    for (let y = 0; y < colorGrid.length; y++) {
+      for (let x = 0; x < colorGrid[y].length; x++) {
+        const color = colorGrid[y][x];
+        const diff = Math.sqrt(
+          Math.pow(color.rgb.r - backgroundColor.r, 2) +
+          Math.pow(color.rgb.g - backgroundColor.g, 2) +
+          Math.pow(color.rgb.b - backgroundColor.b, 2)
+        );
+
+        if (diff > 30) {
+          minX = Math.min(minX, x);
+          maxX = Math.max(maxX, x);
+          minY = Math.min(minY, y);
+          maxY = Math.max(maxY, y);
+        }
+      }
+    }
+
+    // 如果没有有效区域，返回原始网格
+    if (minX > maxX || minY > maxY) {
+      return colorGrid;
+    }
+
+    // 裁剪到有效区域，并添加一些边距
+    const padding = 2;
+    minX = Math.max(0, minX - padding);
+    maxX = Math.min(colorGrid[0].length - 1, maxX + padding);
+    minY = Math.max(0, minY - padding);
+    maxY = Math.min(colorGrid.length - 1, maxY + padding);
+
+    const optimizedGrid: YarnColor[][] = [];
+    for (let y = minY; y <= maxY; y++) {
+      const row: YarnColor[] = [];
+      for (let x = minX; x <= maxX; x++) {
+        row.push(colorGrid[y][x]);
+      }
+      optimizedGrid.push(row);
+    }
+
+    return optimizedGrid;
+  };
+
+  // 根据位置和形状分析为每个位置选择最优针法
+  const getOptimalStitchForPosition = (
+    grid: YarnColor[][],
+    x: number,
+    y: number,
+    shapeAnalysis: any
+  ): any => {
+    const backgroundColor = { r: 255, g: 255, b: 255 };
+    const currentColor = grid[y][x];
+    const isBackground = Math.sqrt(
+      Math.pow(currentColor.rgb.r - backgroundColor.r, 2) +
+      Math.pow(currentColor.rgb.g - backgroundColor.g, 2) +
+      Math.pow(currentColor.rgb.b - backgroundColor.b, 2)
+    ) <= 30;
+
+    if (isBackground) return 'single';
+
+    // 检查是否为边缘
+    const isEdge = (x === 0 || x === grid[0].length - 1 || y === 0 || y === grid.length - 1) ||
+      (x > 0 && Math.sqrt(
+        Math.pow(grid[y][x-1].rgb.r - backgroundColor.r, 2) +
+        Math.pow(grid[y][x-1].rgb.g - backgroundColor.g, 2) +
+        Math.pow(grid[y][x-1].rgb.b - backgroundColor.b, 2)
+      ) <= 30) ||
+      (x < grid[0].length - 1 && Math.sqrt(
+        Math.pow(grid[y][x+1].rgb.r - backgroundColor.r, 2) +
+        Math.pow(grid[y][x+1].rgb.g - backgroundColor.g, 2) +
+        Math.pow(grid[y][x+1].rgb.b - backgroundColor.b, 2)
+      ) <= 30) ||
+      (y > 0 && Math.sqrt(
+        Math.pow(grid[y-1][x].rgb.r - backgroundColor.r, 2) +
+        Math.pow(grid[y-1][x].rgb.g - backgroundColor.g, 2) +
+        Math.pow(grid[y-1][x].rgb.b - backgroundColor.b, 2)
+      ) <= 30) ||
+      (y < grid.length - 1 && Math.sqrt(
+        Math.pow(grid[y+1][x].rgb.r - backgroundColor.r, 2) +
+        Math.pow(grid[y+1][x].rgb.g - backgroundColor.g, 2) +
+        Math.pow(grid[y+1][x].rgb.b - backgroundColor.b, 2)
+      ) <= 30);
+
+    const { shapeType, recommendedStitches } = shapeAnalysis;
+
+    // 根据形状类型和位置特征选择针法
+    if (shapeType === 'organic') {
+      if (isEdge) {
+        return Math.random() > 0.5 ? 'increase' : 'decrease'; // 边缘用增减针
+      }
+      return Math.random() > 0.7 ? 'double' : 'single'; // 内部主要用长针
+    } else if (shapeType === 'geometric') {
+      if (isEdge) {
+        return 'slip'; // 几何边缘用引拔针
+      }
+      return Math.random() > 0.6 ? 'half-double' : 'single'; // 中等密度用中长针
+    } else if (shapeType === 'complex') {
+      if (isEdge) {
+        return recommendedStitches.includes('shell') ? 'shell' : 'single';
+      }
+      // 根据位置的复杂性选择装饰针法
+      const complexity = (x + y) % (grid[0].length + grid.length);
+      if (complexity % 7 === 0 && recommendedStitches.includes('bobble')) {
+        return 'bobble';
+      }
+      return Math.random() > 0.8 ? 'double' : 'single';
+    } else {
+      // simple shape - 主要用基础针法
+      return 'single';
+    }
+  };
+
   const resetPattern = () => {
     setPattern(null);
+    setImageAnalysisResult(null);
     if (fileInputRef.current) {
       fileInputRef.current.value = '';
     }
@@ -213,6 +512,16 @@ function App() {
                   详细步骤
                 </button>
                 <button
+                  onClick={() => setActiveTab('irregular')}
+                  className={`px-6 py-3 font-medium text-sm transition-colors ${
+                    activeTab === 'irregular'
+                      ? 'text-primary-600 border-b-2 border-primary-600 bg-primary-50'
+                      : 'text-gray-500 hover:text-gray-700 hover:bg-gray-50'
+                  }`}
+                >
+                  不规则图形
+                </button>
+                <button
                   onClick={() => setActiveTab('export')}
                   className={`px-6 py-3 font-medium text-sm transition-colors ${
                     activeTab === 'export'
@@ -269,6 +578,13 @@ function App() {
 
                 {activeTab === 'steps' && (
                   <CrochetStepGenerator pattern={pattern} />
+                )}
+
+                {activeTab === 'irregular' && (
+                  <IrregularShapeInstructions
+                    pattern={pattern}
+                    imageAnalysisResult={imageAnalysisResult}
+                  />
                 )}
 
                 {activeTab === 'export' && (

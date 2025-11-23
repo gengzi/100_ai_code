@@ -1,24 +1,32 @@
-import { YarnColor, CrochetInstruction, ColorChange, StitchType } from '../types';
+import { YarnColor, CrochetInstruction, ColorChange, StitchType, StitchDetail, PatternSettings } from '../types';
+import { CROCHET_SYMBOLS, recommendStitchPattern, getStitchInstructions, getStitchesByDifficulty } from './crochetSymbols';
 
 export class CrochetGenerator {
 
   /**
-   * 生成编织指令
+   * 生成增强的编织指令
    */
   generateInstructions(
     colorGrid: YarnColor[][],
-    stitchType: StitchType,
-    stitchesPerRow: number
+    settings: PatternSettings
   ): CrochetInstruction[] {
     const instructions: CrochetInstruction[] = [];
     const rows = colorGrid.length;
+    const availableStitches = getStitchesByDifficulty(settings.difficulty);
+
+    // 分析图片复杂度并推荐针法组合
+    const imageComplexity = this.analyzeImageComplexity(colorGrid);
+    const stitchRecommendation = settings.autoStitchPattern
+      ? recommendStitchPattern(imageComplexity, settings.difficulty)
+      : { primaryStitch: settings.stitchType, recommendations: [] };
 
     for (let row = 0; row < rows; row++) {
-      const instruction = this.generateRowInstruction(
-        colorGrid[row],
+      const instruction = this.generateEnhancedRowInstruction(
+        colorGrid,
         row + 1,
-        stitchType,
-        stitchesPerRow
+        settings,
+        stitchRecommendation,
+        availableStitches
       );
       instructions.push(instruction);
     }
@@ -26,91 +34,8 @@ export class CrochetGenerator {
     return instructions;
   }
 
-  /**
-   * 为单行生成指令
-   */
-  private generateRowInstruction(
-    row: YarnColor[],
-    rowNum: number,
-    stitchType: StitchType,
-    stitchesPerRow: number
-  ): CrochetInstruction {
-    const colorChanges: ColorChange[] = [];
-    let currentColor = row[0];
-    let instructionParts: string[] = [];
-
-    // 分析颜色变化
-    for (let i = 0; i < stitchesPerRow && i < row.length; i++) {
-      if (row[i].id !== currentColor.id) {
-        // 颜色变化
-        colorChanges.push({
-          stitch: i,
-          fromColor: currentColor,
-          toColor: row[i]
-        });
-        currentColor = row[i];
-      }
-    }
-
-    // 生成编织指令
-    currentColor = row[0];
-    let currentStitchCount = 0;
-
-    for (let i = 0; i < stitchesPerRow && i < row.length; i++) {
-      if (row[i].id === currentColor.id) {
-        currentStitchCount++;
-      } else {
-        // 添加当前颜色的指令
-        if (currentStitchCount > 0) {
-          instructionParts.push(
-            `${currentStitchCount}${this.getStitchAbbreviation(stitchType)}(${currentColor.name})`
-          );
-        }
-
-        currentColor = row[i];
-        currentStitchCount = 1;
-      }
-    }
-
-    // 添加最后一段指令
-    if (currentStitchCount > 0) {
-      instructionParts.push(
-        `${currentStitchCount}${this.getStitchAbbreviation(stitchType)}(${currentColor.name})`
-      );
-    }
-
-    const instruction = instructionParts.join(', ');
-
-    return {
-      row: rowNum,
-      instructions: `第${rowNum}行: ${instruction}`,
-      stitchCount: stitchesPerRow,
-      colorChanges
-    };
-  }
-
-  /**
-   * 获取针法的缩写
-   */
-  private getStitchAbbreviation(stitchType: StitchType): string {
-    switch (stitchType) {
-      case 'single':
-        return 'X'; // 短针
-      case 'double':
-        return 'V'; // 长针
-      case 'half-double':
-        return 'H'; // 中长针
-      case 'treble':
-        return 'T'; // 特长针
-      case 'slip':
-        return 'S'; // 引拔针
-      case 'chain':
-        return 'CH'; // 锁针
-      default:
-        return 'X';
-    }
-  }
-
+  
+  
   /**
    * 生成详细教程步骤
    */
@@ -136,7 +61,24 @@ export class CrochetGenerator {
     // 编织步骤
     tutorial.push('🔢 编织步骤：');
 
-    const instructions = this.generateInstructions(colorGrid, stitchType, stitchesPerRow);
+    // 为保持向后兼容性，使用简化的设置对象
+    const simpleSettings: PatternSettings = {
+      width: 0,
+      height: 0,
+      stitchesPerRow,
+      maxColors: 0,
+      colorSimplification: 0,
+      stitchType,
+      removeBlackLines: false,
+      autoStitchPattern: false,
+      mixedStitches: false,
+      difficulty: 'easy',
+      showSymbols: false,
+      showColorChangeMarkers: false,
+      gauge: { stitchesPerInch: 4, rowsPerInch: 4 }
+    };
+
+    const instructions = this.generateInstructions(colorGrid, simpleSettings);
     instructions.forEach(inst => {
       tutorial.push(inst.instructions);
     });
@@ -239,6 +181,316 @@ export class CrochetGenerator {
     } else {
       return `约 ${minutes} 分钟`;
     }
+  }
+
+  /**
+   * 分析图片复杂度
+   */
+  private analyzeImageComplexity(colorGrid: YarnColor[][]): 'simple' | 'moderate' | 'complex' {
+    let colorChanges = 0;
+    let totalCells = 0;
+
+    for (let y = 0; y < colorGrid.length; y++) {
+      for (let x = 0; x < colorGrid[y].length; x++) {
+        totalCells++;
+        // 检查相邻颜色变化
+        if (x > 0 && colorGrid[y][x].id !== colorGrid[y][x - 1].id) colorChanges++;
+        if (y > 0 && colorGrid[y][x].id !== colorGrid[y - 1][x].id) colorChanges++;
+      }
+    }
+
+    const complexityRatio = colorChanges / totalCells;
+
+    if (complexityRatio < 0.1) return 'simple';
+    if (complexityRatio < 0.3) return 'moderate';
+    return 'complex';
+  }
+
+  /**
+   * 生成增强的单行指令
+   */
+  private generateEnhancedRowInstruction(
+    colorGrid: YarnColor[][],
+    rowNum: number,
+    settings: PatternSettings,
+    stitchRecommendation: any,
+    availableStitches: StitchType[]
+  ): CrochetInstruction {
+    const row = colorGrid[rowNum - 1];
+    const colorChanges: ColorChange[] = [];
+    const stitchTypes: StitchDetail[] = [];
+    let currentColor = row[0]!;
+    let currentStitchType = stitchRecommendation.primaryStitch;
+    let currentStitchCount = 0;
+    let instructionParts: string[] = [];
+    let stitchPosition = 0;
+
+    // 分析颜色变化和针法选择
+    for (let i = 0; i < settings.stitchesPerRow && i < row.length; i++) {
+      const color = row[i]!;
+
+      // 检测颜色变化
+      if (color.id !== currentColor.id) {
+        // 记录颜色变化
+        colorChanges.push({
+          stitch: i,
+          fromColor: currentColor,
+          toColor: color
+        });
+
+        // 添加当前针法组合到指令
+        this.addStitchToInstruction(
+          instructionParts,
+          stitchTypes,
+          currentStitchType,
+          currentStitchCount,
+          currentColor,
+          stitchPosition
+        );
+
+        currentColor = color;
+        currentStitchCount = 0;
+        stitchPosition = i;
+      }
+
+      // 智能针法选择
+      if (settings.mixedStitches && settings.autoStitchPattern && stitchRecommendation.secondaryStitches) {
+        currentStitchType = this.selectOptimalStitch(
+          row, i, availableStitches, stitchRecommendation.secondaryStitches
+        );
+      }
+
+      currentStitchCount++;
+    }
+
+    // 添加最后一段针法
+    this.addStitchToInstruction(
+      instructionParts,
+      stitchTypes,
+      currentStitchType,
+      currentStitchCount,
+      currentColor,
+      stitchPosition
+    );
+
+    // 生成详细的换线说明
+    const notes = this.generateColorChangeNotes(colorChanges, rowNum, settings.showColorChangeMarkers);
+
+    return {
+      row: rowNum,
+      instructions: this.formatEnhancedInstruction(instructionParts, rowNum, colorChanges.length > 0),
+      stitchCount: settings.stitchesPerRow,
+      colorChanges,
+      stitchTypes,
+      notes: notes.length > 0 ? notes : undefined,
+      difficulty: this.calculateRowDifficulty(stitchTypes)
+    };
+  }
+
+  /**
+   * 添加针法到指令列表
+   */
+  private addStitchToInstruction(
+    instructionParts: string[],
+    stitchTypes: StitchDetail[],
+    stitchType: StitchType,
+    count: number,
+    color: YarnColor,
+    position: number
+  ): void {
+    if (count > 0) {
+      const symbol = CROCHET_SYMBOLS[stitchType];
+      instructionParts.push(`${count}${symbol.abbreviation}(${color.name})`);
+
+      stitchTypes.push({
+        type: stitchType,
+        count,
+        color,
+        position,
+        symbol: symbol.symbol
+      });
+    }
+  }
+
+  /**
+   * 智能选择最优针法
+   */
+  private selectOptimalStitch(
+    _row: YarnColor[],
+    position: number,
+    availableStitches: StitchType[],
+    secondaryStitches?: StitchType[]
+  ): StitchType {
+    // 简单的针法选择逻辑，可以进一步复杂化
+    if (position % 10 === 0 && secondaryStitches && secondaryStitches.length > 0) {
+      // 每隔10针使用装饰针法
+      const decorativeStitches = secondaryStitches.filter(s =>
+        ['shell', 'popcorn', 'bobble'].includes(s)
+      );
+      if (decorativeStitches.length > 0) {
+        return decorativeStitches[Math.floor(Math.random() * decorativeStitches.length)];
+      }
+    }
+
+    return availableStitches[0] || 'single'; // 默认使用第一个可用针法
+  }
+
+  /**
+   * 生成换线说明
+   */
+  private generateColorChangeNotes(
+    colorChanges: ColorChange[],
+    rowNum: number,
+    showMarkers: boolean
+  ): string[] {
+    const notes: string[] = [];
+
+    if (colorChanges.length > 0) {
+      notes.push(`🔄 第${rowNum}行需要换线 ${colorChanges.length} 次`);
+
+      colorChanges.forEach((change) => {
+        if (showMarkers) {
+          notes.push(`   在第${change.stitch}针处：${change.fromColor.name} → ${change.toColor.name}`);
+          notes.push(`   💡 建议：在此位置打个结，防止脱线`);
+        }
+      });
+
+      notes.push(`   📌 技巧：换线时在背面留约10cm线头，便于后期整理`);
+    }
+
+    return notes;
+  }
+
+  /**
+   * 格式化增强的编织指令
+   */
+  private formatEnhancedInstruction(
+    instructionParts: string[],
+    rowNum: number,
+    hasColorChanges: boolean
+  ): string {
+    const direction = rowNum % 2 === 1 ? '→ (从左到右)' : '← (从右到左)';
+    let instruction = `第${rowNum}行 ${direction}: `;
+
+    instruction += instructionParts.join(', ');
+
+    if (hasColorChanges) {
+      instruction += ' [含换线]';
+    }
+
+    return instruction;
+  }
+
+  /**
+   * 计算行难度
+   */
+  private calculateRowDifficulty(stitchTypes: StitchDetail[]): 'easy' | 'medium' | 'hard' {
+    let difficultyScore = 0;
+
+    stitchTypes.forEach(stitch => {
+      const symbol = CROCHET_SYMBOLS[stitch.type];
+      switch (symbol.difficulty) {
+        case 'medium': difficultyScore += 2; break;
+        case 'hard': difficultyScore += 3; break;
+        case 'easy': difficultyScore += 1; break;
+      }
+    });
+
+    const averageScore = difficultyScore / stitchTypes.length;
+
+    if (averageScore < 1.5) return 'easy';
+    if (averageScore < 2.5) return 'medium';
+    return 'hard';
+  }
+
+  /**
+   * 生成增强的教程
+   */
+  generateEnhancedTutorial(
+    colorGrid: YarnColor[][],
+    settings: PatternSettings
+  ): string[] {
+    const tutorial: string[] = [];
+    const imageComplexity = this.analyzeImageComplexity(colorGrid);
+    const stitchRecommendation = settings.autoStitchPattern
+      ? recommendStitchPattern(imageComplexity, settings.difficulty)
+      : { primaryStitch: settings.stitchType, recommendations: [] };
+
+    // 准备工作
+    tutorial.push('🧶 钩织准备指南');
+    tutorial.push('═'.repeat(30));
+    tutorial.push('');
+    tutorial.push('📋 材料准备：');
+    tutorial.push('1. 所需颜色的毛线（根据颜色图例）');
+    tutorial.push(`2. ${this.getRecommendedHookSize(settings.stitchType)}号钩针`);
+    tutorial.push('3. 记号扣（用于标记行数）');
+    tutorial.push('4. 剪刀和缝合针');
+    tutorial.push('');
+
+    // 针法说明
+    tutorial.push('🔸 主要针法说明');
+    tutorial.push('─'.repeat(25));
+    tutorial.push('');
+
+    const primaryStitchInfo = getStitchInstructions(stitchRecommendation.primaryStitch);
+    tutorial.push(...primaryStitchInfo);
+
+    if (stitchRecommendation.secondaryStitches) {
+      tutorial.push('');
+      tutorial.push('🔸 辅助针法');
+      tutorial.push('─'.repeat(20));
+      stitchRecommendation.secondaryStitches.forEach(stitch => {
+        tutorial.push(...getStitchInstructions(stitch));
+        tutorial.push('');
+      });
+    }
+
+    // 推荐建议
+    if (stitchRecommendation.recommendations.length > 0) {
+      tutorial.push('💡 编织建议');
+      tutorial.push('─'.repeat(20));
+      stitchRecommendation.recommendations.forEach(rec => {
+        tutorial.push(`• ${rec}`);
+      });
+      tutorial.push('');
+    }
+
+    // 换线技巧
+    tutorial.push('🔄 换线技巧');
+    tutorial.push('─'.repeat(20));
+    tutorial.push('• 换线时在新颜色最后一针的最后一个线圈完成前换线');
+    tutorial.push('• 在背面留下10-15cm的线头便于后期整理');
+    tutorial.push('• 相邻颜色变化可以采用"浮线"技术减少线头');
+    tutorial.push('• 定期检查线的张力，避免过紧或过松');
+    tutorial.push('');
+
+    return tutorial;
+  }
+
+  /**
+   * 获取推荐钩针号数
+   */
+  private getRecommendedHookSize(stitchType: StitchType): string {
+    const sizeMap = {
+      'single': '2.5-3.5',
+      'double': '3.5-4.5',
+      'half-double': '3.0-4.0',
+      'treble': '4.0-5.0',
+      'double-treble': '5.0-6.0',
+      'slip': '2.0-3.0',
+      'chain': '2.5-3.5',
+      'increase': '3.0-4.0',
+      'decrease': '3.0-4.0',
+      '2-together': '3.5-4.5',
+      '3-together': '3.5-4.5',
+      'shell': '4.0-5.0',
+      'popcorn': '4.0-5.0',
+      'bobble': '3.5-4.5',
+      'front-post': '4.0-5.0',
+      'back-post': '4.0-5.0'
+    };
+
+    return sizeMap[stitchType] || '3.5-4.5';
   }
 }
 

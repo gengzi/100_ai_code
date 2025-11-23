@@ -1,4 +1,5 @@
 import { YarnColor, ImageUploadResult, PatternSettings } from '../types';
+import { imageAnalyzer } from './imageAnalyzer';
 
 // 预定义的毛线颜色调色板
 export const YARN_COLOR_PALETTE: YarnColor[] = [
@@ -32,14 +33,23 @@ export class ImageProcessor {
   }
 
   /**
-   * 加载并处理图片
+   * 加载并处理图片 - 增强版本
    */
   async processImage(file: File, settings: PatternSettings): Promise<ImageUploadResult> {
     return new Promise((resolve, reject) => {
       const img = new Image();
-      img.onload = () => {
+      img.onload = async () => {
         try {
-          const result = this.processImageElement(img, settings);
+          let result: ImageUploadResult;
+
+          if (settings.autoStitchPattern || settings.mixedStitches) {
+            // 使用智能分析和针法生成
+            result = await this.processImageWithSmartAnalysis(img, settings);
+          } else {
+            // 使用传统处理方式
+            result = this.processImageElement(img, settings);
+          }
+
           resolve(result);
         } catch (error) {
           reject(error);
@@ -48,6 +58,32 @@ export class ImageProcessor {
       img.onerror = reject;
       img.src = URL.createObjectURL(file);
     });
+  }
+
+  /**
+   * 智能分析和处理图片
+   */
+  private async processImageWithSmartAnalysis(
+    img: HTMLImageElement,
+    settings: PatternSettings
+  ): Promise<ImageUploadResult> {
+    try {
+      // 使用智能分析器分析图片
+      const analysisResult = await imageAnalyzer.analyzeImage(img, settings);
+
+      // 将分析结果转换为ImageUploadResult格式
+      return {
+        originalImage: img,
+        pixelatedData: analysisResult.extractedSubject,
+        extractedColors: analysisResult.dominantColors,
+        width: settings.width,
+        height: settings.height,
+        analysisResult // 保留分析结果用于后续处理
+      };
+    } catch (error) {
+      console.warn('智能分析失败，回退到传统处理方式:', error);
+      return this.processImageElement(img, settings);
+    }
   }
 
   /**

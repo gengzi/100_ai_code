@@ -110,20 +110,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             />
           </div>
 
-          {/* 每行针数 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              每行针数
-            </label>
-            <input
-              type="number"
-              min="5"
-              max="50"
-              value={settings.stitchesPerRow}
-              onChange={(e) => handleSettingChange('stitchesPerRow', parseInt(e.target.value) || 20)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            />
-          </div>
+          {/* 每行针数现在根据抠图结果自动计算 */}
 
           {/* 最大颜色数 */}
           <div>
