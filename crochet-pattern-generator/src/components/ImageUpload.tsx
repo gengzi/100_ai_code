@@ -147,22 +147,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             </select>
           </div>
 
-          {/* 针法类型 */}
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">
-              主要针法
-            </label>
-            <select
-              value={settings.stitchType}
-              onChange={(e) => handleSettingChange('stitchType', e.target.value)}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-primary-500 focus:border-primary-500"
-            >
-              <option value="single">短针 (X)</option>
-              <option value="double">长针 (V)</option>
-              <option value="half-double">中长针 (H)</option>
-              <option value="treble">特长针 (T)</option>
-            </select>
-          </div>
+          {/* 主要针法现在根据图片特点自动匹配 */}
         </div>
       </div>
 

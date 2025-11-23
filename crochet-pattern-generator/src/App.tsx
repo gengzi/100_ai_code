@@ -63,8 +63,8 @@ function App() {
         );
       }
 
-      // 分析形状特征并生成智能针法推荐
-      const shapeAnalysis = analyzeShapeForStitches(colorGrid);
+      // 分析图片特征并自动匹配最适合的针法
+      const imageAnalysis = analyzeImageForOptimalStitch(colorGrid);
 
       // 动态计算每行的实际针数（基于实际有效像素）
       const dynamicStitchesPerRow = calculateDynamicStitchesPerRow(colorGrid);
@@ -76,21 +76,19 @@ function App() {
       const optimizedSettings = {
         ...newSettings,
         stitchesPerRow: dynamicStitchesPerRow,
-        difficulty: shapeAnalysis.difficulty,
-        // 如果启用了自动针法选择，使用第一个推荐针法作为主要针法
-        stitchType: newSettings.autoStitchPattern && shapeAnalysis.recommendedStitches.length > 0
-          ? shapeAnalysis.recommendedStitches[0] as any
-          : newSettings.stitchType
+        difficulty: imageAnalysis.difficulty,
+        // 自动使用分析出的主要针法
+        stitchType: imageAnalysis.primaryStitch
       };
 
-      // 转换为ColorCell格式，根据形状类型智能分配针法
+      // 转换为ColorCell格式，根据图片特征智能分配针法
       const grid: ColorCell[][] = optimizedGrid.map((row, y) =>
         row.map((color, x) => ({
           x,
           y,
           color,
           stitchType: newSettings.mixedStitches
-            ? getOptimalStitchForPosition(optimizedGrid, x, y, shapeAnalysis)
+            ? getOptimalStitchForPosition(optimizedGrid, x, y, imageAnalysis)
             : optimizedSettings.stitchType
         }))
       );
@@ -116,7 +114,7 @@ function App() {
       };
 
       setPattern(newPattern);
-      setImageAnalysisResult(imageResult.analysisResult);
+      setImageAnalysisResult(null); // 不再使用分析结果
       setActiveTab('grid');
     } catch (error) {
       console.error('生成图解失败:', error);
@@ -156,17 +154,22 @@ function App() {
     return Math.max(5, Math.min(50, Math.round(maxStitches * 1.1))); // 留10%余量
   };
 
-  // 分析形状并生成智能针法推荐
-  const analyzeShapeForStitches = (colorGrid: YarnColor[][]): {
+  // 分析图片特征并自动匹配最适合的针法
+  const analyzeImageForOptimalStitch = (colorGrid: YarnColor[][]): {
+    primaryStitch: any;
     shapeType: 'simple' | 'organic' | 'geometric' | 'complex';
     recommendedStitches: string[];
     difficulty: 'easy' | 'medium' | 'hard';
+    analysis: string;
   } => {
     const backgroundColor = { r: 255, g: 255, b: 255 };
     let edgePixels = 0;
     let totalPixels = 0;
     let colorChanges = 0;
     let hollowAreas = 0;
+    let detailLevel = 0;
+    let colorCount = 0;
+    const uniqueColors = new Set<string>();
 
     for (let y = 0; y < colorGrid.length; y++) {
       for (let x = 0; x < colorGrid[y].length; x++) {
@@ -177,8 +180,10 @@ function App() {
           Math.pow(color.rgb.b - backgroundColor.b, 2)
         );
 
+        // 统计非背景像素
         if (diff > 30) {
           totalPixels++;
+          uniqueColors.add(`${color.rgb.r},${color.rgb.g},${color.rgb.b}`);
 
           // 检查是否为边缘
           const isEdge =
@@ -205,14 +210,17 @@ function App() {
 
           if (isEdge) edgePixels++;
 
-          // 检测颜色变化
+          // 检测颜色变化（细节程度）
           if (x > 0) {
             const prevColorDiff = Math.sqrt(
               Math.pow(color.rgb.r - colorGrid[y][x-1].rgb.r, 2) +
               Math.pow(color.rgb.g - colorGrid[y][x-1].rgb.g, 2) +
               Math.pow(color.rgb.b - colorGrid[y][x-1].rgb.b, 2)
             );
-            if (prevColorDiff > 50) colorChanges++;
+            if (prevColorDiff > 30) {
+              colorChanges++;
+              detailLevel += Math.min(prevColorDiff / 100, 1);
+            }
           }
         } else if (y > 0 && y < colorGrid.length - 1 && x > 0 && x < colorGrid[y].length - 1) {
           // 检测空心区域
@@ -232,9 +240,11 @@ function App() {
       }
     }
 
+    colorCount = uniqueColors.size;
     const edgeRatio = edgePixels / totalPixels;
     const colorChangeRatio = colorChanges / totalPixels;
     const hollowRatio = hollowAreas / (colorGrid.length * colorGrid[0].length);
+    const avgDetail = totalPixels > 0 ? detailLevel / totalPixels : 0;
 
     // 判断形状类型
     let shapeType: 'simple' | 'organic' | 'geometric' | 'complex';
@@ -248,37 +258,74 @@ function App() {
       shapeType = 'simple';
     }
 
-    // 推荐针法
-    const recommendedStitches: string[] = ['single']; // 基础针法
+    // 智能选择主要针法
+    let primaryStitch: any = 'single';
+    let analysis = '';
 
-    if (shapeType === 'organic') {
-      recommendedStitches.push('double', 'increase', 'decrease');
-    } else if (shapeType === 'geometric') {
-      recommendedStitches.push('half-double', 'slip', 'chain');
-    } else if (shapeType === 'complex') {
-      recommendedStitches.push('double', 'shell', 'bobble');
+    // 基于多个因素选择最合适的针法
+    const edgeScore = edgeRatio;
+    const detailScore = avgDetail;
+    const colorScore = Math.min(colorCount / 10, 1);
+    const hollowScore = hollowRatio;
+
+    if (hollowScore > 0.08) {
+      // 有较多空心区域，适合几何图形，使用锁针连接
+      primaryStitch = 'chain';
+      analysis = '检测到较多空心区域，推荐使用锁针进行连接和轮廓编织';
+    } else if (edgeScore > 0.35) {
+      // 边缘复杂，适合有机形状，使用长针
+      primaryStitch = 'double';
+      analysis = '检测到复杂边缘轮廓，推荐使用长针展现流畅曲线';
+    } else if (detailScore > 0.4) {
+      // 细节丰富，适合复杂图案，使用中长针
+      primaryStitch = 'half-double';
+      analysis = '检测到丰富细节，推荐使用中长针平衡细节和编织速度';
+    } else if (colorScore > 0.5) {
+      // 颜色变化多，使用短针保持清晰
+      primaryStitch = 'single';
+      analysis = '检测到多种颜色变化，推荐使用短针保持图案清晰度';
+    } else if (edgeScore > 0.15) {
+      // 中等复杂度，使用长针
+      primaryStitch = 'double';
+      analysis = '检测到中等复杂度图案，推荐使用长针提高编织效率';
+    } else {
+      // 简单图案，使用短针
+      primaryStitch = 'single';
+      analysis = '检测到简单图案，推荐使用短针确保基础效果';
     }
 
-    // 根据颜色变化添加更多针法
+    // 推荐辅助针法
+    const recommendedStitches: string[] = [primaryStitch];
+
+    if (shapeType === 'organic') {
+      recommendedStitches.push('increase', 'decrease');
+    } else if (shapeType === 'geometric') {
+      recommendedStitches.push('slip', 'chain');
+    } else if (shapeType === 'complex') {
+      recommendedStitches.push('shell', 'bobble');
+    }
+
     if (colorChangeRatio > 0.2) {
       recommendedStitches.push('front-post', 'back-post');
     }
 
     // 确定难度
-    const complexityScore = edgeRatio + colorChangeRatio + hollowRatio;
+    const complexityScore = edgeRatio + colorChangeRatio + hollowRatio + avgDetail;
     let difficulty: 'easy' | 'medium' | 'hard';
-    if (complexityScore < 0.2) {
+    if (complexityScore < 0.3) {
       difficulty = 'easy';
-    } else if (complexityScore < 0.5) {
+    } else if (complexityScore < 0.6) {
       difficulty = 'medium';
     } else {
       difficulty = 'hard';
     }
 
     return {
+      primaryStitch,
       shapeType,
-      recommendedStitches: [...new Set(recommendedStitches)], // 去重
-      difficulty
+      recommendedStitches: [...new Set(recommendedStitches)],
+      difficulty,
+      analysis
     };
   };
 
@@ -332,12 +379,12 @@ function App() {
     return optimizedGrid;
   };
 
-  // 根据位置和形状分析为每个位置选择最优针法
+  // 根据位置和图片分析为每个位置选择最优针法
   const getOptimalStitchForPosition = (
     grid: YarnColor[][],
     x: number,
     y: number,
-    shapeAnalysis: any
+    imageAnalysis: any
   ): any => {
     const backgroundColor = { r: 255, g: 255, b: 255 };
     const currentColor = grid[y][x];
@@ -372,29 +419,34 @@ function App() {
         Math.pow(grid[y+1][x].rgb.b - backgroundColor.b, 2)
       ) <= 30);
 
-    const { shapeType, recommendedStitches } = shapeAnalysis;
+    const { shapeType, recommendedStitches, primaryStitch } = imageAnalysis;
 
-    // 根据形状类型和位置特征选择针法
+    // 大部分位置使用主要针法，在特殊位置使用辅助针法
+    if (Math.random() < 0.8) {
+      return primaryStitch; // 80%概率使用主要针法
+    }
+
+    // 根据形状类型和位置特征选择辅助针法
     if (shapeType === 'organic') {
       if (isEdge) {
         return Math.random() > 0.5 ? 'increase' : 'decrease'; // 边缘用增减针
       }
-      return Math.random() > 0.7 ? 'double' : 'single'; // 内部主要用长针
+      return recommendedStitches.includes('double') ? 'double' : 'single';
     } else if (shapeType === 'geometric') {
       if (isEdge) {
         return 'slip'; // 几何边缘用引拔针
       }
-      return Math.random() > 0.6 ? 'half-double' : 'single'; // 中等密度用中长针
+      return recommendedStitches.includes('half-double') ? 'half-double' : 'single';
     } else if (shapeType === 'complex') {
-      if (isEdge) {
-        return recommendedStitches.includes('shell') ? 'shell' : 'single';
+      if (isEdge && recommendedStitches.includes('shell')) {
+        return 'shell';
       }
       // 根据位置的复杂性选择装饰针法
       const complexity = (x + y) % (grid[0].length + grid.length);
       if (complexity % 7 === 0 && recommendedStitches.includes('bobble')) {
         return 'bobble';
       }
-      return Math.random() > 0.8 ? 'double' : 'single';
+      return recommendedStitches.includes('double') ? 'double' : 'single';
     } else {
       // simple shape - 主要用基础针法
       return 'single';
