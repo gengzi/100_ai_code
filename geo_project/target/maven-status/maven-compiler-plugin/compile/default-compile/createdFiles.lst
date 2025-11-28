@@ -1,0 +1,7 @@
+com\geo\platform\controller\GEOController$LoginRequest.class
+com\geo\platform\controller\GEOController$GeoOptimizeRequest.class
+com\geo\platform\controller\GEOController$OptimizeAndSaveRequest.class
+com\geo\platform\controller\GEOController$PublishRequest.class
+com\geo\platform\model\BatchPublishRequest.class
+com\geo\platform\controller\GEOController.class
+com\geo\platform\controller\GEOController$BatchPublishRequest.class

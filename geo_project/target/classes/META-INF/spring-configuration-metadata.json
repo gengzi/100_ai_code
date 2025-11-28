@@ -1,0 +1,311 @@
+{
+  "groups": [
+    {
+      "name": "geo.platform",
+      "type": "com.geo.platform.config.GEOPlatformConfig",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig"
+    },
+    {
+      "name": "geo.platform.ai",
+      "type": "com.geo.platform.config.GEOPlatformConfig$AIConfig",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig",
+      "sourceMethod": "getAi()"
+    },
+    {
+      "name": "geo.platform.platform",
+      "type": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig",
+      "sourceMethod": "getPlatform()"
+    },
+    {
+      "name": "geo.platform.platform.cnblogs",
+      "type": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig",
+      "sourceMethod": "getCnblogs()"
+    },
+    {
+      "name": "geo.platform.platform.csdn",
+      "type": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig",
+      "sourceMethod": "getCsdn()"
+    },
+    {
+      "name": "geo.platform.platform.douyin",
+      "type": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig",
+      "sourceMethod": "getDouyin()"
+    },
+    {
+      "name": "geo.platform.platform.jianshu",
+      "type": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig",
+      "sourceMethod": "getJianshu()"
+    },
+    {
+      "name": "geo.platform.platform.juejin",
+      "type": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig",
+      "sourceMethod": "getJuejin()"
+    },
+    {
+      "name": "geo.platform.platform.oschina",
+      "type": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig",
+      "sourceMethod": "getOschina()"
+    },
+    {
+      "name": "geo.platform.platform.segmentfault",
+      "type": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig",
+      "sourceMethod": "getSegmentfault()"
+    },
+    {
+      "name": "geo.platform.platform.weibo",
+      "type": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig",
+      "sourceMethod": "getWeibo()"
+    },
+    {
+      "name": "geo.platform.platform.xiaohongshu",
+      "type": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig",
+      "sourceMethod": "getXiaohongshu()"
+    },
+    {
+      "name": "geo.platform.platform.zhihu",
+      "type": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig",
+      "sourceMethod": "getZhihu()"
+    },
+    {
+      "name": "geo.platform.publish",
+      "type": "com.geo.platform.config.GEOPlatformConfig$PublishConfig",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig",
+      "sourceMethod": "getPublish()"
+    }
+  ],
+  "properties": [
+    {
+      "name": "geo.platform.ai.key",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$AIConfig"
+    },
+    {
+      "name": "geo.platform.ai.max-tokens",
+      "type": "java.lang.Integer",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$AIConfig",
+      "defaultValue": 2000
+    },
+    {
+      "name": "geo.platform.ai.model",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$AIConfig",
+      "defaultValue": "gpt-3.5-turbo"
+    },
+    {
+      "name": "geo.platform.ai.temperature",
+      "type": "java.lang.Double",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$AIConfig",
+      "defaultValue": 0.3
+    },
+    {
+      "name": "geo.platform.ai.timeout",
+      "type": "java.lang.Integer",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$AIConfig",
+      "defaultValue": 60000
+    },
+    {
+      "name": "geo.platform.ai.url",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$AIConfig",
+      "defaultValue": "https:\/\/api.openai.com\/v1\/chat\/completions"
+    },
+    {
+      "name": "geo.platform.platform.cnblogs.base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.cnblogs.name",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.cnblogs.publish-url",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.csdn.base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.csdn.name",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.csdn.publish-url",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.douyin.base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.douyin.name",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.douyin.publish-url",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.jianshu.base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.jianshu.name",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.jianshu.publish-url",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.juejin.base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.juejin.name",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.juejin.publish-url",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.oschina.base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.oschina.name",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.oschina.publish-url",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.segmentfault.base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.segmentfault.name",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.segmentfault.publish-url",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.weibo.base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.weibo.name",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.weibo.publish-url",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.xiaohongshu.base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.xiaohongshu.name",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.xiaohongshu.publish-url",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.zhihu.base-url",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.zhihu.name",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.platform.zhihu.publish-url",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PlatformConfig$PlatformInfo"
+    },
+    {
+      "name": "geo.platform.publish.auto-retry",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PublishConfig",
+      "defaultValue": true
+    },
+    {
+      "name": "geo.platform.publish.headless",
+      "type": "java.lang.Boolean",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PublishConfig",
+      "defaultValue": false
+    },
+    {
+      "name": "geo.platform.publish.max-retries",
+      "type": "java.lang.Integer",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PublishConfig",
+      "defaultValue": 3
+    },
+    {
+      "name": "geo.platform.publish.publish-interval",
+      "type": "java.lang.Integer",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PublishConfig",
+      "defaultValue": 2000
+    },
+    {
+      "name": "geo.platform.publish.storage-state-path",
+      "type": "java.lang.String",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PublishConfig",
+      "defaultValue": ".\/storage-states"
+    },
+    {
+      "name": "geo.platform.publish.timeout",
+      "type": "java.lang.Integer",
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PublishConfig",
+      "defaultValue": 30000
+    }
+  ],
+  "hints": []
+}
