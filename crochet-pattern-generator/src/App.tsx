@@ -521,7 +521,7 @@ function App() {
               onImageUpload={handleImageUpload}
               settings={settings}
               onSettingsChange={setSettings}
-              colorGrid={colorGrid}
+              colorGrid={colorGrid || undefined}
             />
 
             {isGenerating && (
