@@ -2,15 +2,16 @@
   "name": "crochet-pattern-generator",
   "version": "1.0.0",
   "type": "module",
-  "description": "一个可以将图片转换为钩针编织图解的Web应用",
-  "main": "index.js",
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "start": "vite preview",
     "preview": "vite preview",
     "lint": "eslint . --ext ts,tsx --report-unused-disable-directives --max-warnings 0",
     "lint:fix": "eslint . --ext ts,tsx --fix"
   },
+  "description": "一个可以将图片转换为钩针编织图解的Web应用",
+  "main": "index.js",
   "dependencies": {
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
