@@ -133,7 +133,7 @@ function App() {
           optimizedSettings.crochetRange.type === 'circular') {
 
         // 添加起针说明
-        const startInstructions = rangeResult.startInstructions.map((desc, index) => ({
+        const startInstructions = rangeResult.startInstructions.map((desc) => ({
           row: 0,
           instructions: desc,
           stitchCount: 0,

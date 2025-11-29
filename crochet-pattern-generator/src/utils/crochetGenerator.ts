@@ -75,7 +75,13 @@ export class CrochetGenerator {
       difficulty: 'easy',
       showSymbols: false,
       showColorChangeMarkers: false,
-      gauge: { stitchesPerInch: 4, rowsPerInch: 4 }
+      gauge: { stitchesPerInch: 4, rowsPerInch: 4 },
+      crochetRange: {
+        type: 'full',
+        shape: 'rectangle',
+        startMethod: 'chain',
+        direction: 'rows'
+      }
     };
 
     const instructions = this.generateInstructions(colorGrid, simpleSettings);
