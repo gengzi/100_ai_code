@@ -1,23 +1,27 @@
-import React, { useCallback, useState } from 'react';
+import React, { useState, useCallback } from 'react';
 import { useDropzone } from 'react-dropzone';
-import { Upload, Image as ImageIcon, X } from 'lucide-react';
+import { Upload, Image as ImageIcon, X, Edit3 } from 'lucide-react';
 import { PatternSettings } from '../types';
+import { FreehandRangeSelector } from './FreehandRangeSelector';
 
 interface ImageUploadProps {
   onImageUpload: (file: File, settings: PatternSettings) => void;
   settings: PatternSettings;
   onSettingsChange: (settings: PatternSettings) => void;
   className?: string;
+  colorGrid?: (any | null)[][];
 }
 
 export const ImageUpload: React.FC<ImageUploadProps> = ({
   onImageUpload,
   settings,
   onSettingsChange,
-  className = ''
+  className = '',
+  colorGrid
 }) => {
   const [preview, setPreview] = useState<string | null>(null);
   const [isProcessing, setIsProcessing] = useState(false);
+  const [showFreehandSelector, setShowFreehandSelector] = useState(false);
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
     const file = acceptedFiles[0];
@@ -71,6 +75,21 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
       ...settings,
       [key]: value
     });
+  };
+
+  
+  // 应用自定义范围（来自手绘选择）
+  const applyCustomRange = (rangeSettings: Partial<PatternSettings['crochetRange']>) => {
+    const updatedSettings = {
+      ...settings,
+      crochetRange: {
+        ...settings.crochetRange,
+        ...rangeSettings
+      }
+    };
+
+    onSettingsChange(updatedSettings);
+    setShowFreehandSelector(false);
   };
 
   return (
@@ -151,6 +170,7 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
         </div>
       </div>
 
+      
       {/* 上传区域 */}
       <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
         <h3 className="text-lg font-medium text-gray-900 mb-4">上传图片</h3>
@@ -251,6 +271,44 @@ export const ImageUpload: React.FC<ImageUploadProps> = ({
             <p><strong>提示:</strong> 此功能适合处理有黑色轮廓线的卡通图片、简笔画等。对于摄影图片建议关闭此选项。</p>
           </div>
         </div>
+      </div>
+
+      
+      {/* 手绘选择钩织范围 */}
+      <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-medium text-gray-900 flex items-center">
+            <Edit3 className="w-5 h-5 mr-2 text-blue-600" />
+            手绘选择钩织范围
+          </h3>
+          <button
+            onClick={() => setShowFreehandSelector(!showFreehandSelector)}
+            className={`px-4 py-2 rounded-lg border transition-colors ${
+              showFreehandSelector
+                ? 'bg-blue-50 border-blue-500 text-blue-700'
+                : 'border-gray-300 hover:border-gray-400'
+            }`}
+          >
+            {showFreehandSelector ? '隐藏工具' : '显示工具'}
+          </button>
+        </div>
+
+        {showFreehandSelector && (
+          <div className="space-y-4">
+            <div className="p-4 bg-blue-50 rounded-lg">
+              <h4 className="font-medium text-blue-900 mb-2">✏️ 手绘选择</h4>
+              <p className="text-sm text-blue-800">
+                通过绘制闭合区域来选择您想要钩织的图案部分。适合复杂图案的选择，可以精确控制钩织范围。
+              </p>
+            </div>
+
+            <FreehandRangeSelector
+              settings={settings}
+              onSettingsChange={applyCustomRange}
+              imageGrid={colorGrid}
+            />
+          </div>
+        )}
       </div>
 
       {/* 使用提示 */}

@@ -96,6 +96,18 @@ export interface PatternSettings {
   difficulty: 'easy' | 'medium' | 'hard'; // 整体难度
   showSymbols: boolean;       // 是否显示图解符号
   showColorChangeMarkers: boolean; // 是否显示换线标记
+  // 钩织范围设置
+  crochetRange: {
+    type: 'full' | 'custom' | 'circular'; // 钩织范围类型
+    centerX?: number; // 自定义范围中心X坐标
+    centerY?: number; // 自定义范围中心Y坐标
+    radius?: number; // 圆形范围半径
+    shape?: 'rectangle' | 'circle' | 'ellipse'; // 范围形状
+    width?: number; // 自定义范围宽度
+    height?: number; // 自定义范围高度
+    startMethod?: 'chain' | 'magic-ring'; // 起针方法：锁链起针或环形起针
+    direction?: 'rows' | 'rounds'; // 钩织方向：行钩织或圈钩织
+  };
   gauge: {
     stitchesPerInch: number;
     rowsPerInch: number;
@@ -109,6 +121,36 @@ export interface ImageUploadResult {
   width: number;
   height: number;
   analysisResult?: any; // 智能分析结果（可选）
+}
+
+export interface Depth3DSettings {
+  depthIntensity: number;        // 深度强度 (0.1-2.0)
+  layerCount: number;            // 分层数量 (3-20)
+  smoothing: boolean;            // 是否平滑深度
+  edgeEnhancement: boolean;      // 是否增强边缘
+  colorDepth: boolean;           // 是否基于颜色生成深度
+  contrast: number;              // 对比度 (0.5-2.0)
+  brightness: number;            // 亮度 (0.5-1.5)
+}
+
+export interface Image3DResult {
+  originalImage: HTMLImageElement;
+  depthMap: ImageData;           // 深度图
+  normalMap: ImageData;          // 法线贴图
+  layers: ImageLayer[];          // 3D分层
+  extractedColors: YarnColor[];
+  width: number;
+  height: number;
+  depth: number;                 // 3D深度层数
+}
+
+export interface ImageLayer {
+  id: number;
+  depth: number;                 // 深度层级 (0-255)
+  imageData: ImageData;          // 该层的图像数据
+  mask: ImageData;               // 该层的遮罩
+  prominence: number;            // 该层的显著度
+  color: YarnColor;              // 主导颜色
 }
 
 export interface ExportOptions {

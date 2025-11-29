@@ -7,7 +7,13 @@ import { IrregularShapeInstructions } from './components/IrregularShapeInstructi
 import { ExportPanel } from './components/ExportPanel';
 import { imageProcessor } from './utils/imageProcessor';
 import { crochetGenerator } from './utils/crochetGenerator';
-import { CrochetPattern, PatternSettings, ColorCell, YarnColor } from './types';
+import { crochetRangeProcessor } from './utils/crochetRangeProcessor';
+import {
+  CrochetPattern,
+  PatternSettings,
+  ColorCell,
+  YarnColor
+} from './types';
 
 const defaultSettings: PatternSettings = {
   width: 50,
@@ -23,6 +29,13 @@ const defaultSettings: PatternSettings = {
   difficulty: 'easy',       // 使用简单模式
   showSymbols: true,        // 默认显示符号
   showColorChangeMarkers: true, // 默认显示换线标记
+  // 钩织范围设置
+  crochetRange: {
+    type: 'full',
+    shape: 'rectangle',
+    startMethod: 'chain',
+    direction: 'rows'
+  },
   gauge: {
     stitchesPerInch: 4,
     rowsPerInch: 4
@@ -36,6 +49,7 @@ function App() {
   const [activeTab, setActiveTab] = useState<'grid' | 'instructions' | 'steps' | 'irregular' | 'export'>('grid');
   const [imageAnalysisResult, setImageAnalysisResult] = useState<any>(null);
   const [showGrid, setShowGrid] = useState(true);
+  const [colorGrid, setColorGrid] = useState<(any | null)[][] | null>(null);
 
   const patternRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
@@ -62,6 +76,9 @@ function App() {
           newSettings.colorSimplification
         );
       }
+
+      // 保存颜色网格用于圆形检测和手绘选择
+      setColorGrid(colorGrid);
 
       // 分析图片特征并自动匹配最适合的针法
       const imageAnalysis = analyzeImageForOptimalStitch(colorGrid);
@@ -100,10 +117,43 @@ function App() {
       );
 
       // 生成增强的编织说明
-      const instructions = crochetGenerator.generateInstructions(
+      let instructions = crochetGenerator.generateInstructions(
         optimizedGrid,
         optimizedSettings
       );
+
+      // 根据钩织范围设置处理指令
+      const rangeResult = crochetRangeProcessor.processCrochetRange(
+        optimizedGrid,
+        optimizedSettings
+      );
+
+      // 如果是圆形或圈钩织，需要特殊处理指令
+      if (optimizedSettings.crochetRange.direction === 'rounds' ||
+          optimizedSettings.crochetRange.type === 'circular') {
+
+        // 添加起针说明
+        const startInstructions = rangeResult.startInstructions.map((desc, index) => ({
+          row: 0,
+          instructions: desc,
+          stitchCount: 0,
+          colorChanges: [],
+          stitchTypes: [],
+          notes: ['开始说明']
+        }));
+
+        // 将起针说明插入到指令列表开头
+        instructions = [...startInstructions, ...instructions];
+
+        // 更新说明以包含钩织方向信息
+        instructions = instructions.map((instruction, index) => ({
+          ...instruction,
+          notes: [
+            ...(instruction.notes || []),
+            ...(index === 0 ? [] : [`钩织方向: ${rangeResult.technique}`])
+          ]
+        }));
+      }
 
       // 创建图解对象
       const newPattern: CrochetPattern = {
@@ -463,8 +513,7 @@ function App() {
                 将您的图片转换为钩针图解
               </h2>
               <p className="text-lg text-gray-600 max-w-2xl mx-auto">
-                上传一张图片，自动生成钩针编织图解，包含详细的编织说明和颜色图例。
-                支持自定义尺寸、颜色数量和针法类型。
+                上传一张图片，自动生成钩针编织图解。支持智能颜色提取和多种针法选择。
               </p>
             </div>
 
@@ -472,6 +521,7 @@ function App() {
               onImageUpload={handleImageUpload}
               settings={settings}
               onSettingsChange={setSettings}
+              colorGrid={colorGrid}
             />
 
             {isGenerating && (
@@ -560,7 +610,7 @@ function App() {
                 </div>
 
                 {/* 标签页内容 */}
-                {activeTab === 'grid' && (
+                {activeTab === 'grid' && pattern && (
                   <div className="space-y-6">
                     <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
                       {/* 图解网格 */}
@@ -583,7 +633,7 @@ function App() {
                   </div>
                 )}
 
-                {activeTab === 'instructions' && (
+                {activeTab === 'instructions' && pattern && (
                   <CrochetInstructions
                     instructions={pattern.instructions}
                     colors={pattern.colors}
@@ -591,18 +641,18 @@ function App() {
                   />
                 )}
 
-                {activeTab === 'steps' && (
+                {activeTab === 'steps' && pattern && (
                   <CrochetStepGenerator pattern={pattern} />
                 )}
 
-                {activeTab === 'irregular' && (
+                {activeTab === 'irregular' && pattern && (
                   <IrregularShapeInstructions
                     pattern={pattern}
                     imageAnalysisResult={imageAnalysisResult}
                   />
                 )}
 
-                {activeTab === 'export' && (
+                {activeTab === 'export' && pattern && (
                   <ExportPanel
                     pattern={pattern}
                     patternElement={patternRef}
@@ -622,7 +672,7 @@ function App() {
               🧶 钩针图解生成器 - 让编织更简单
             </p>
             <p className="text-sm">
-              支持多种图片格式 | 自动颜色提取 | 详细编织说明
+              支持多种图片格式 | 自动颜色提取 | 智能针法选择 | 详细编织说明
             </p>
           </div>
         </div>
