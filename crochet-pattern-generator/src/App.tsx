@@ -7,7 +7,6 @@ import { IrregularShapeInstructions } from './components/IrregularShapeInstructi
 import { ExportPanel } from './components/ExportPanel';
 import { imageProcessor } from './utils/imageProcessor';
 import { crochetGenerator } from './utils/crochetGenerator';
-import { crochetRangeProcessor } from './utils/crochetRangeProcessor';
 import {
   CrochetPattern,
   PatternSettings,
@@ -122,37 +121,37 @@ function App() {
         optimizedSettings
       );
 
-      // 根据钩织范围设置处理指令
-      const rangeResult = crochetRangeProcessor.processCrochetRange(
-        optimizedGrid,
-        optimizedSettings
-      );
-
       // 如果是圆形或圈钩织，需要特殊处理指令
       if (optimizedSettings.crochetRange.direction === 'rounds' ||
           optimizedSettings.crochetRange.type === 'circular') {
 
         // 添加起针说明
-        const startInstructions = rangeResult.startInstructions.map((desc) => ({
-          row: 0,
+        const startInstructions = [
+          optimizedSettings.crochetRange.startMethod === 'magic-ring'
+            ? '使用环形起针法开始'
+            : `起 ${optimizedGrid[0]?.length || 20} 锁针`,
+          optimizedSettings.crochetRange.startMethod === 'magic-ring'
+            ? `${optimizedGrid[0]?.length || 20}针短针连成环形`
+            : '第1行：在每针锁针上钩1针短针'
+        ].map((desc, index) => ({
+          row: index,
           instructions: desc,
           stitchCount: 0,
           colorChanges: [],
-          stitchTypes: [],
-          notes: ['开始说明']
+          stitchTypes: [{
+            type: optimizedSettings.stitchType,
+            count: 0,
+            color: { id: 'main', name: '主色', hexCode: '#000000', rgb: { r: 0, g: 0, b: 0 } },
+            position: 1,
+            symbol: '✕'
+          }],
+          notes: index === 0 ? [
+            optimizedSettings.crochetRange.direction === 'rounds' ? '从中心开始圈钩织' : '从左到右钩织'
+          ] : undefined
         }));
 
         // 将起针说明插入到指令列表开头
         instructions = [...startInstructions, ...instructions];
-
-        // 更新说明以包含钩织方向信息
-        instructions = instructions.map((instruction, index) => ({
-          ...instruction,
-          notes: [
-            ...(instruction.notes || []),
-            ...(index === 0 ? [] : [`钩织方向: ${rangeResult.technique}`])
-          ]
-        }));
       }
 
       // 创建图解对象
