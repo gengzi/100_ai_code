@@ -36,7 +36,9 @@
       "Bash(\"/c/Users/Administrator/.m2/wrapper/dists/apache-maven-3.9.11-bin/6mqf5t809d9geo83kj4ttckcbc/apache-maven-3.9.11/bin/mvn.cmd\" spring-boot:run -Dmaven.test.skip=true)",
       "Bash(powershell:*)",
       "Bash(del:*)",
-      "Bash(tasklist:*)"
+      "Bash(tasklist:*)",
+      "mcp__web-search-prime__webSearchPrime",
+      "mcp__web-reader__webReader"
     ],
     "deny": [],
     "ask": []

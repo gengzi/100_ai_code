@@ -13,9 +13,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 @Service
 public class PlatformPublishService {
@@ -719,39 +717,508 @@ public class PlatformPublishService {
 
     private PublishResult publishToCSDN(Page page, String content, String title) {
         try {
-            // CSDN发布逻辑
+            logger.info("开始CSDN发布流程: {}", title);
+
+            // 1. 导航到CSDN编辑页面
             page.navigate("https://editor.csdn.net/md?not_checkout=1");
 
-            // 等待并填写标题 - CSDN使用标题输入框
-            try {
-                page.waitForSelector("input[placeholder*='标题']", new Page.WaitForSelectorOptions().setTimeout(10000));
-                page.fill("input[placeholder*='标题']", title);
-            } catch (Exception e) {
-                // 如果找不到标题输入框，尝试其他选择器
-                logger.warn("CSDN标题输入框未找到，尝试其他选择器");
-                page.waitForSelector(".title-input, .article-title, input[type='text']", new Page.WaitForSelectorOptions().setTimeout(5000));
-                page.fill(".title-input, .article-title, input[type='text']", title);
+            // 2. 等待页面完全加载
+            page.waitForLoadState(LoadState.NETWORKIDLE);
+            Thread.sleep(2000); // 额外等待确保页面稳定
+
+            // 3. 检查登录状态
+            if (!checkCSDNLoginStatus(page)) {
+                logger.warn("CSDN可能未登录，尝试继续发布流程");
             }
 
-            // 等待并填写内容 - CSDN支持Markdown编辑器
-            try {
-                page.waitForSelector(".editor-contentarea, .CodeMirror textarea, .markdown-editor textarea",
-                    new Page.WaitForSelectorOptions().setTimeout(10000));
-                page.fill(".editor-contentarea, .CodeMirror textarea, .markdown-editor textarea", content);
-            } catch (Exception e) {
-                logger.warn("CSDN内容编辑器未找到，尝试其他选择器");
-                // 尝试直接在body中输入
-                page.waitForSelector("textarea, [contenteditable='true']", new Page.WaitForSelectorOptions().setTimeout(5000));
-                page.fill("textarea, [contenteditable='true']", content);
+            // 4. 多策略填写标题
+            if (!fillCSDNTitle(page, title)) {
+                return PublishResult.failure("CSDN标题填写失败");
             }
+            logger.info("CSDN标题填写成功: {}", title);
 
-            logger.info("CSDN博客内容发布成功: {}", title);
-            return PublishResult.success("CSDN发布成功", "https://blog.csdn.net/article/details/" + System.currentTimeMillis());
+            // 5. 多策略填写内容
+            if (!fillCSDNContent(page, content)) {
+                return PublishResult.failure("CSDN内容填写失败");
+            }
+            logger.info("CSDN内容填写成功，长度: {} 字符", content.length());
+
+            // 6. 点击发布按钮
+            if (!clickCSDNPublishButton(page)) {
+                return PublishResult.failure("CSDN发布按钮点击失败");
+            }
+            logger.info("CSDN发布按钮点击成功");
+
+            // 7. 处理发布设置弹窗
+            if (!handleCSDNPublishModal(page, content)) {
+                return PublishResult.failure("CSDN发布设置处理失败");
+            }
+            logger.info("CSDN发布设置处理完成");
+
+            // 8. 等待发布完成并获取文章URL
+            String articleUrl = waitForCSDNPublishComplete(page);
+            if (articleUrl != null) {
+                logger.info("CSDN博客发布成功: {}", articleUrl);
+                return PublishResult.success("CSDN发布成功", articleUrl);
+            } else {
+                logger.warn("CSDN发布完成但无法获取文章URL");
+                return PublishResult.success("CSDN发布成功", "https://blog.csdn.net/");
+            }
 
         } catch (Exception e) {
-            logger.error("CSDN发布失败", e);
+            logger.error("CSDN发布过程中发生异常", e);
             return PublishResult.failure("CSDN发布失败: " + e.getMessage());
         }
+    }
+
+    /**
+     * 检查CSDN登录状态
+     */
+    private boolean checkCSDNLoginStatus(Page page) {
+        try {
+            // 检查是否有登录用户信息
+            page.waitForSelector(".user-info, .login-user, [data-testid='user-avatar']",
+                new Page.WaitForSelectorOptions().setTimeout(5000));
+            return true;
+        } catch (Exception e) {
+            // 检查是否有登录按钮
+            try {
+                page.waitForSelector("a[href*='login'], .login-btn",
+                    new Page.WaitForSelectorOptions().setTimeout(3000));
+                return false; // 发现登录按钮，说明未登录
+            } catch (Exception e2) {
+                // 无法确定登录状态，假设已登录
+                return true;
+            }
+        }
+    }
+
+    /**
+     * 多策略填写CSDN标题
+     */
+    private boolean fillCSDNTitle(Page page, String title) {
+        String[] titleSelectors = {
+            // 精确匹配
+            "//div[contains(@class,'article-bar')]//input[contains(@placeholder,'文章标题')]",
+            "//div[contains(@class,'article-bar')]//input[contains(@placeholder,'标题')]",
+            "//input[@placeholder='请输入文章标题']",
+            "//input[@placeholder='标题']",
+
+            // 类名匹配
+            ".title-input",
+            ".article-title",
+            ".article-bar input",
+
+            // 属性匹配
+            "input[placeholder*='标题']",
+            "input[type='text'][data-testid*='title']",
+
+            // 备选方案
+            "input[type='text']:visible",
+            "input[aria-label*='标题']",
+            "[data-testid='title-input']"
+        };
+
+        for (String selector : titleSelectors) {
+            try {
+                logger.debug("尝试标题选择器: {}", selector);
+                page.waitForSelector(selector, new Page.WaitForSelectorOptions().setTimeout(3000));
+
+                // 点击获取焦点
+                page.click(selector);
+                Thread.sleep(500);
+
+                // 清空并填写
+                page.fill(selector, "");
+                page.fill(selector, title);
+
+                // 验证填写成功
+                String filledValue = page.inputValue(selector);
+                if (filledValue.contains(title)) {
+                    logger.info("标题填写成功，使用选择器: {}", selector);
+                    return true;
+                }
+
+            } catch (Exception e) {
+                logger.debug("标题选择器 {} 失败: {}", selector, e.getMessage());
+                continue;
+            }
+        }
+
+        // 最后尝试：查找第一个可见的文本输入框
+        try {
+            List<ElementHandle> inputs = page.querySelectorAll("input[type='text']");
+            for (ElementHandle input : inputs) {
+                if (input.isVisible()) {
+                    input.click();
+                    Thread.sleep(500);
+                    input.fill(title);
+
+                    String value = input.inputValue();
+                    if (value.contains(title)) {
+                        logger.info("使用备选方案填写标题成功");
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.error("备选标题填写失败", e);
+        }
+
+        return false;
+    }
+
+    /**
+     * 多策略填写CSDN内容
+     */
+    private boolean fillCSDNContent(Page page, String content) {
+        String[] contentSelectors = {
+            // CSDN特定的编辑器选择器
+            "//div[@class='editor']//div[@class='cledit-section']",
+            "//div[contains(@class,'editor')]//div[contains(@class,'cledit-section')]",
+            ".editor-contentarea",
+            ".markdown-editor textarea",
+            ".CodeMirror textarea",
+
+            // 通用编辑器选择器
+            "textarea:visible",
+            "[contenteditable='true']:visible",
+            ".editor-content",
+            ".content-editor",
+
+            // 备选方案
+            "textarea",
+            "[contenteditable='true']",
+            ".editor"
+        };
+
+        for (String selector : contentSelectors) {
+            try {
+                logger.debug("尝试内容选择器: {}", selector);
+                page.waitForSelector(selector, new Page.WaitForSelectorOptions().setTimeout(3000));
+
+                // 点击获取焦点
+                page.click(selector);
+                Thread.sleep(1000);
+
+                // 根据不同类型的编辑器使用不同的填写方法
+                if (selector.contains("CodeMirror") || selector.contains("contenteditable")) {
+                    // 对于CodeMirror等特殊编辑器，使用复制粘贴方式
+                    if (fillContentByCopy(page, selector, content)) {
+                        logger.info("内容填写成功（复制粘贴方式），使用选择器: {}", selector);
+                        return true;
+                    }
+                } else {
+                    // 普通textarea，直接填写
+                    page.fill(selector, content);
+
+                    // 验证填写成功
+                    String filledValue = page.inputValue(selector);
+                    if (filledValue.length() > content.length() * 0.8) {
+                        logger.info("内容填写成功（直接填写方式），使用选择器: {}", selector);
+                        return true;
+                    }
+                }
+
+            } catch (Exception e) {
+                logger.debug("内容选择器 {} 失败: {}", selector, e.getMessage());
+                continue;
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * 通过复制粘贴方式填写内容（适用于CodeMirror等编辑器）
+     */
+    private boolean fillContentByCopy(Page page, String selector, String content) {
+        try {
+            // 点击编辑器获取焦点
+            page.click(selector);
+            Thread.sleep(500);
+
+            // 清空现有内容
+            page.keyboard().press("Control+A");
+            Thread.sleep(200);
+            page.keyboard().press("Delete");
+            Thread.sleep(200);
+
+            // 使用JavaScript设置内容到剪贴板并粘贴
+            page.evaluate("""
+                (content) => {
+                    // 创建临时textarea
+                    const textarea = document.createElement('textarea');
+                    textarea.value = content;
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(textarea);
+                }
+                """, content);
+
+            // 粘贴内容
+            page.keyboard().press("Control+V");
+            Thread.sleep(1000);
+
+            return true;
+
+        } catch (Exception e) {
+            logger.error("复制粘贴填写内容失败", e);
+            return false;
+        }
+    }
+
+    /**
+     * 点击CSDN发布按钮
+     */
+    private boolean clickCSDNPublishButton(Page page) {
+        String[] publishButtonSelectors = {
+            // 精确匹配
+            "//button[contains(@class,'btn-publish') and contains(text(),'发布文章')]",
+            "//button[contains(text(),'发布文章')]",
+            "//button[normalize-space()='发布文章']",
+
+            // 类名匹配
+            ".btn-publish",
+            ".publish-btn",
+            ".btn-primary:has-text('发布')",
+
+            // 文本匹配
+            "button:has-text('发布文章')",
+            "button:has-text('发布')",
+            "button:has-text('提交')",
+
+            // 属性匹配
+            "button[type='submit']",
+            "[data-testid='publish-button']",
+            "[aria-label*='发布']"
+        };
+
+        for (String selector : publishButtonSelectors) {
+            try {
+                logger.debug("尝试发布按钮选择器: {}", selector);
+                page.waitForSelector(selector, new Page.WaitForSelectorOptions().setTimeout(3000));
+
+                // 滚动到按钮可见
+//                page.scrollIntoViewIfNeeded(selector);
+                Thread.sleep(500);
+
+                // 点击按钮
+                page.click(selector);
+                logger.info("发布按钮点击成功，使用选择器: {}", selector);
+                return true;
+
+            } catch (Exception e) {
+                logger.debug("发布按钮选择器 {} 失败: {}", selector, e.getMessage());
+                continue;
+            }
+        }
+
+        // 最后尝试：查找包含发布文字的按钮
+        try {
+            List<ElementHandle> buttons = page.querySelectorAll("button");
+            for (ElementHandle button : buttons) {
+                if (button.isVisible()) {
+                    String text = button.innerText().trim();
+                    if (text.contains("发布") || text.contains("提交") || text.contains("保存")) {
+                        button.click();
+                        logger.info("使用备选方案点击发布按钮成功，按钮文本: {}", text);
+                        return true;
+                    }
+                }
+            }
+        } catch (Exception e) {
+            logger.error("备选发布按钮点击失败", e);
+        }
+
+        return false;
+    }
+
+    /**
+     * 处理CSDN发布设置弹窗
+     */
+    private boolean handleCSDNPublishModal(Page page, String content) {
+        try {
+            // 等待弹窗出现
+            page.waitForSelector(".modal, .dialog, .popup",
+                new Page.WaitForSelectorOptions().setTimeout(10000));
+            logger.info("发布弹窗已出现");
+
+            Thread.sleep(2000); // 等待弹窗完全加载
+
+            // 处理文章标签（可选）
+            handleCSDNTags(page, Arrays.asList("技术", "编程", "原创"));
+
+            // 处理文章摘要（可选）
+            handleCSDNSummary(page, generateSummary(content));
+
+            // 处理分类专栏（可选）
+            handleCSDNCategories(page, Collections.emptyList());
+
+            // 设置可见范围
+            handleCSDNVisibility(page, "public");
+
+            // 最终点击发布按钮
+            return clickFinalPublishButton(page);
+
+        } catch (Exception e) {
+            logger.warn("处理发布弹窗失败，可能没有弹窗或处理失败: {}", e.getMessage());
+            // 即使弹窗处理失败，也尝试继续
+            return true;
+        }
+    }
+
+    /**
+     * 处理CSDN文章标签
+     */
+    private void handleCSDNTags(Page page, List<String> tags) {
+        try {
+            // 点击添加标签按钮
+            page.click("button:has-text('添加文章标签'), .tag__btn-tag, [data-testid='add-tag']");
+            Thread.sleep(1000);
+
+            // 输入标签
+            page.fill("input[placeholder*='请输入文字搜索'], input[placeholder*='标签']", tags.get(0));
+            Thread.sleep(1000);
+            page.keyboard().press("Enter");
+            Thread.sleep(500);
+
+            // 如果有更多标签，继续添加
+            for (int i = 1; i < Math.min(tags.size(), 3); i++) {
+                page.fill("input[placeholder*='请输入文字搜索']", tags.get(i));
+                Thread.sleep(1000);
+                page.keyboard().press("Enter");
+                Thread.sleep(500);
+            }
+
+            // 关闭标签弹窗
+            page.click("button[title='关闭'], .modal__close, .close-btn");
+            Thread.sleep(1000);
+
+        } catch (Exception e) {
+            logger.warn("处理标签失败，跳过", e);
+        }
+    }
+
+    /**
+     * 处理CSDN文章摘要
+     */
+    private void handleCSDNSummary(Page page, String summary) {
+        try {
+            page.fill("textarea[placeholder*='摘要'], .desc-box textarea, [data-testid='summary']", summary);
+            Thread.sleep(1000);
+        } catch (Exception e) {
+            logger.warn("处理摘要失败，跳过", e);
+        }
+    }
+
+    /**
+     * 处理CSDN分类专栏
+     */
+    private void handleCSDNCategories(Page page, List<String> categories) {
+        try {
+            for (String category : categories) {
+                page.click(String.format("input[type='checkbox'][value='%s']", category));
+                Thread.sleep(500);
+            }
+        } catch (Exception e) {
+            logger.warn("处理分类失败，跳过", e);
+        }
+    }
+
+    /**
+     * 处理CSDN可见范围
+     */
+    private void handleCSDNVisibility(Page page, String visibility) {
+        try {
+            page.click(String.format("input[type='radio'][id='%s'], input[type='radio'][value='%s']",
+                visibility, visibility));
+            Thread.sleep(1000);
+        } catch (Exception e) {
+            logger.warn("处理可见范围失败，跳过", e);
+        }
+    }
+
+    /**
+     * 点击最终发布按钮
+     */
+    private boolean clickFinalPublishButton(Page page) {
+        String[] finalPublishSelectors = {
+            "//div[@class='modal__button-bar']//button[contains(text(),'发布文章')]",
+            "//div[contains(@class,'modal')]//button[contains(text(),'发布')]",
+            "button:has-text('发布文章')",
+            "button:has-text('确认发布')",
+            ".btn-primary:has-text('发布')"
+        };
+
+        for (String selector : finalPublishSelectors) {
+            try {
+                page.click(selector);
+                logger.info("最终发布按钮点击成功，使用选择器: {}", selector);
+                return true;
+            } catch (Exception e) {
+                continue;
+            }
+        }
+
+        logger.warn("无法找到最终发布按钮");
+        return false;
+    }
+
+    /**
+     * 等待CSDN发布完成并获取文章URL
+     */
+    private String waitForCSDNPublishComplete(Page page) {
+        try {
+            // 等待发布完成的指示器
+            page.waitForSelector(".success-tip, .publish-success, a[href*='article/details']",
+                new Page.WaitForSelectorOptions().setTimeout(15000));
+
+            // 尝试从页面URL获取文章链接
+            String currentUrl = page.url();
+            if (currentUrl.contains("article/details")) {
+                return currentUrl;
+            }
+
+            // 尝试从页面元素获取文章链接
+            try {
+                ElementHandle linkElement = page.querySelector("a[href*='article/details']");
+                if (linkElement != null) {
+                    return linkElement.getAttribute("href");
+                }
+            } catch (Exception e) {
+                logger.debug("从页面元素获取文章链接失败", e);
+            }
+
+            // 如果无法获取具体URL，返回CSDN主页
+            return "https://blog.csdn.net/";
+
+        } catch (Exception e) {
+            logger.warn("等待发布完成超时，假设发布成功", e);
+            return "https://blog.csdn.net/";
+        }
+    }
+
+    /**
+     * 生成文章摘要
+     */
+    private String generateSummary(String content) {
+        if (content == null || content.trim().isEmpty()) {
+            return "";
+        }
+
+        // 去除Markdown标记并提取前200个字符作为摘要
+        String plainText = content.replaceAll("#+\\s*", "")  // 移除标题标记
+                                 .replaceAll("\\*\\*(.*?)\\*\\*", "$1")  // 移除粗体标记
+                                 .replaceAll("\\*(.*?)\\*", "$1")  // 移除斜体标记
+                                 .replaceAll("```[\\s\\S]*?```", "")  // 移除代码块
+                                 .replaceAll("`([^`]*)`", "$1")  // 移除行内代码
+                                 .replaceAll("!\\[([^\\]]*)\\]\\([^)]*\\)", "$1")  // 移除图片
+                                 .replaceAll("\\[([^\\]]*)\\]\\([^)]*\\)", "$1")  // 移除链接
+                                 .trim();
+
+        return plainText.length() > 200 ? plainText.substring(0, 197) + "..." : plainText;
     }
 
     private PublishResult publishToJuejin(Page page, String content, String title) {

@@ -93,32 +93,27 @@
     {
       "name": "geo.platform.ai.max-tokens",
       "type": "java.lang.Integer",
-      "sourceType": "com.geo.platform.config.GEOPlatformConfig$AIConfig",
-      "defaultValue": 2000
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$AIConfig"
     },
     {
       "name": "geo.platform.ai.model",
       "type": "java.lang.String",
-      "sourceType": "com.geo.platform.config.GEOPlatformConfig$AIConfig",
-      "defaultValue": "gpt-3.5-turbo"
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$AIConfig"
     },
     {
       "name": "geo.platform.ai.temperature",
       "type": "java.lang.Double",
-      "sourceType": "com.geo.platform.config.GEOPlatformConfig$AIConfig",
-      "defaultValue": 0.3
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$AIConfig"
     },
     {
       "name": "geo.platform.ai.timeout",
       "type": "java.lang.Integer",
-      "sourceType": "com.geo.platform.config.GEOPlatformConfig$AIConfig",
-      "defaultValue": 60000
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$AIConfig"
     },
     {
       "name": "geo.platform.ai.url",
       "type": "java.lang.String",
-      "sourceType": "com.geo.platform.config.GEOPlatformConfig$AIConfig",
-      "defaultValue": "https:\/\/api.openai.com\/v1\/chat\/completions"
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$AIConfig"
     },
     {
       "name": "geo.platform.platform.cnblogs.base-url",
@@ -273,38 +268,32 @@
     {
       "name": "geo.platform.publish.auto-retry",
       "type": "java.lang.Boolean",
-      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PublishConfig",
-      "defaultValue": true
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PublishConfig"
     },
     {
       "name": "geo.platform.publish.headless",
       "type": "java.lang.Boolean",
-      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PublishConfig",
-      "defaultValue": false
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PublishConfig"
     },
     {
       "name": "geo.platform.publish.max-retries",
       "type": "java.lang.Integer",
-      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PublishConfig",
-      "defaultValue": 3
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PublishConfig"
     },
     {
       "name": "geo.platform.publish.publish-interval",
       "type": "java.lang.Integer",
-      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PublishConfig",
-      "defaultValue": 2000
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PublishConfig"
     },
     {
       "name": "geo.platform.publish.storage-state-path",
       "type": "java.lang.String",
-      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PublishConfig",
-      "defaultValue": ".\/storage-states"
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PublishConfig"
     },
     {
       "name": "geo.platform.publish.timeout",
       "type": "java.lang.Integer",
-      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PublishConfig",
-      "defaultValue": 30000
+      "sourceType": "com.geo.platform.config.GEOPlatformConfig$PublishConfig"
     }
   ],
   "hints": []
