@@ -13,38 +13,27 @@ spring:
           temperature: 0.7
           max-tokens: 4000
       base-url: "https://api.siliconflow.cn"
-  datasource:
-    # 使用H2文件数据库，数据持久化到磁盘
-    url: jdbc:h2:file:./data/geodb;DB_CLOSE_ON_EXIT=FALSE;AUTO_RECONNECT=TRUE
-    driver-class-name: org.h2.Driver
-    username: sa
-    password:
-    # 连接池配置
-    hikari:
-      connection-timeout: 20000
-      maximum-pool-size: 10
 
-  jpa:
-    hibernate:
-      ddl-auto: update  # 自动更新表结构
-    show-sql: true
-    properties:
-      hibernate:
-        format_sql: true
-        # H2数据库特定配置
-        dialect: org.hibernate.dialect.H2Dialect
-        # 启用批处理优化
-        jdbc.batch_size: 20
-        order_inserts: true
-        order_updates: true
+  # Redis配置
+  data:
+    redis:
+      host: localhost
+      port: 6379
+      password:
+      database: 0
+      timeout: 3000ms
+      lettuce:
+        pool:
+          max-active: 8
+          max-wait: -1ms
+          max-idle: 8
+          min-idle: 0
 
-  h2:
-    console:
-      enabled: true
-      path: /h2-console
-      # 允许外部访问控制台
-      settings:
-        web-allow-others: true
+  # Redis序列化配置
+  cache:
+    type: redis
+    redis:
+      time-to-live: 86400000  # 24小时
 
 # Spring AI配置 (兼容SiliconFlow OpenAI API)
 
@@ -65,9 +54,15 @@ geo:
       storage-state-path: "./storage-states"
       headless: false
       timeout: 30000
+      retry-count: 3
       publish-interval: 2000
       auto-retry: true
       max-retries: 3
+      # 批量发布配置
+      batch:
+        max-concurrent: 3              # 最大并发发布数
+        timeout: 300000                # 批量发布超时时间（5分钟）
+        interval: 2000                 # 发布间隔（毫秒）
 
     # 平台配置
     platform:
@@ -92,6 +87,16 @@ geo:
         name: "csdn"
         base-url: "https://blog.csdn.net"
         publish-url: "https://editor.csdn.net/md?not_checkout=1"
+        # 改进版CSDN发布配置
+        timeout: 30000
+        retry-count: 3
+        editor-url: "https://editor.csdn.net/md?not_checkout=1"
+        # 元素等待配置
+        element-wait-timeout: 5000
+        page-stable-timeout: 10000
+        # 发布设置
+        auto-tags: ["技术", "编程", "原创"]
+        default-visibility: "public"
       juejin:
         name: "juejin"
         base-url: "https://juejin.cn"

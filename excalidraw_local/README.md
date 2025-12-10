@@ -1,381 +1,134 @@
-# Excalidraw API 服务
+# Excalidraw 本地渲染工具
 
-一个高性能的 Excalidraw JSON 数据转图片 API 服务，基于 Canvas 技术实现，无需浏览器环境。
+一个完全使用本地JavaScript文件的Excalidraw渲染解决方案，无需依赖外部CDN或网络连接。
 
-## 功能特性
+## 🚀 快速开始
 
-- ✅ **完整支持 Excalidraw 图形元素**
-  - 矩形、椭圆、菱形
-  - 线条、箭头
-  - 文本（支持多行、自动换行）
-  - 图片（支持缩放、裁剪）
-  - 自由绘制
+### 方法1: 一键启动（推荐）
+双击运行 `start.bat` 文件，它将：
+- 启动本地HTTP服务器
+- 自动打开浏览器到渲染页面
 
-- ✅ **多种输出格式**
-  - PNG（默认）
-  - JPEG（可调质量）
-  - WebP（可调质量）
-  - SVG（矢量格式）
+### 方法2: 手动启动
+1. 确保已安装 Node.js
+2. 在命令行运行：
+   ```bash
+   node start-local-server.js
+   ```
+3. 打开浏览器访问：`http://localhost:3000`
 
-- ✅ **高性能设计**
-  - 渲染器池管理
-  - 内存优化
-  - Redis 缓存
-  - 并发处理
+## 📁 项目结构
 
-- ✅ **易于部署**
-  - Docker 容器化
-  - 环境配置简单
-  - 健康检查
-  - 性能监控
-
-## 快速开始
-
-### 使用 Docker Compose（推荐）
-
-```bash
-# 克隆项目
-git clone <repository-url>
-cd excalidraw-api
-
-# 启动服务（包含 Redis 缓存）
-docker-compose up -d
-
-# 查看服务状态
-docker-compose ps
-
-# 查看日志
-docker-compose logs -f excalidraw-api
+```
+excalidraw_local/
+├── index.html                 # 主渲染页面
+├── start-local-server.js      # 本地HTTP服务器
+├── start.bat                  # Windows启动脚本
+├── react.production.min.js    # React库（本地）
+├── react-dom.production.min.js # ReactDOM库（本地）
+├── excalidraw.production.min.js # Excalidraw库（本地）
+├── test-simple.html           # 简单测试页面
+├── test-browser.html          # 浏览器测试页面
+└── README.md                  # 说明文档
 ```
 
-### 使用 Docker（单服务）
+## ✨ 功能特性
 
-```bash
-# 构建镜像
-docker build -t excalidraw-api .
+### 🎨 核心功能
+- ✅ 完全本地运行，无需网络连接
+- ✅ 使用本地JS文件，加载速度快
+- ✅ 支持实时编辑和渲染
+- ✅ 导出为PNG图片
+- ✅ 预设模板快速开始
+- ✅ JSON数据直接编辑
 
-# 运行容器
-docker run -p 3000:3000 \
-  -e RENDERER_POOL_SIZE=5 \
-  -e REDIS_URL=redis://your-redis-host:6379 \
-  excalidraw-api
-```
+### 🛠️ 支持的图形
+- 矩形、圆形、椭圆等基本形状
+- 箭头和连接线
+- 文本标签
+- 流程图元素
+- 思维导图
+- 自定义图形
 
-### 本地开发
+### 📤 导出选项
+- PNG图片格式
+- JSON数据格式
+- 可扩展支持更多格式
 
-```bash
-# 安装依赖
-npm install
+## 🎯 使用方法
 
-# 复制环境配置
-cp .env.example .env
+### 1. 基本使用
+1. 启动应用后，你会看到一个完整的Excalidraw编辑器
+2. 使用工具栏绘制图形
+3. 编辑器的JSON数据会实时更新到右侧面板
 
-# 启动开发服务器
-npm run dev
+### 2. 使用模板
+1. 点击"加载简单示例"或"加载流程图"
+2. 图表会自动渲染到画布
+3. 你可以进一步编辑和修改
 
-# 运行测试
-npm test
-```
+### 3. 导入自定义数据
+1. 在右侧的JSON编辑器中粘贴Excalidraw数据
+2. 点击"渲染图表"按钮
+3. 图表将显示在画布上
 
-## API 使用
+### 4. 导出结果
+1. 点击"导出为PNG"下载图片
+2. 或者复制右侧的JSON数据
 
-### 基本渲染
+## 🔧 技术实现
 
-```bash
-curl -X POST http://localhost:3000/api/render \
-  -H "Content-Type: application/json" \
-  -d '{
-    "type": "excalidraw",
-    "version": 2,
-    "elements": [
-      {
-        "id": "rect-1",
-        "type": "rectangle",
-        "x": 100,
-        "y": 100,
-        "width": 200,
-        "height": 100,
-        "strokeColor": "#e67700",
-        "backgroundColor": "#fff3bf",
-        "fillStyle": "solid",
-        "strokeWidth": 2,
-        "roughness": 0,
-        "opacity": 100
-      }
-    ],
-    "appState": {
-      "viewBackgroundColor": "#ffffff"
-    }
-  }' \
-  --output diagram.png
-```
+### 技术栈
+- **React 18.2.0** - 前端框架
+- **ReactDOM 18.2.0** - DOM渲染
+- **Excalidraw** - 图表渲染引擎
+- **Node.js** - 本地服务器
+- **纯JavaScript** - 无其他依赖
 
-### 文件上传渲染
+### 本地化优势
+- 🚀 **零网络依赖**：完全离线工作
+- ⚡ **快速加载**：本地文件，无CDN延迟
+- 🔒 **数据安全**：所有数据都在本地处理
+- 🎯 **稳定可靠**：不受外部服务影响
 
-```bash
-curl -X POST http://localhost:3000/api/render/file \
-  -F "file=@examples/simple-rectangle.json" \
-  -F "format=png" \
-  -F "quality=90" \
-  --output diagram.png
-```
+## 📋 系统要求
 
-### 高级选项
+- **操作系统**：Windows 10+ (已测试)
+- **Node.js**：14.0+ （必需）
+- **浏览器**：Chrome 90+、Firefox 88+、Edge 90+
+- **内存**：至少 4GB RAM
+- **存储**：至少 100MB 可用空间
 
-```bash
-# 指定输出格式和质量
-curl -X POST http://localhost:3000/api/render?format=jpeg&quality=85 \
-  -H "Content-Type: application/json" \
-  -d @your-excalidraw.json \
-  --output diagram.jpg
-
-# 指定画布尺寸
-curl -X POST http://localhost:3000/api/render?width=1200&height=800 \
-  -H "Content-Type: application/json" \
-  -d @your-excalidraw.json \
-  --output diagram.png
-```
-
-## API 文档
-
-### 主要端点
-
-| 端点 | 方法 | 描述 |
-|------|------|------|
-| `/api/render` | POST | JSON 数据渲染 |
-| `/api/render/file` | POST | 文件上传渲染 |
-| `/health` | GET | 健康检查 |
-| `/stats` | GET | 性能统计 |
-| `/api` | GET | API 文档 |
-
-### 查询参数
-
-| 参数 | 类型 | 默认值 | 描述 |
-|------|------|--------|------|
-| `format` | string | png | 输出格式：png, jpeg, webp, svg |
-| `quality` | number | 90 | 图片质量 (1-100) |
-| `width` | number | auto | 画布宽度 |
-| `height` | number | auto | 画布高度 |
-| `backgroundColor` | string | - | 背景颜色（十六进制） |
-
-### 请求体格式
-
-```javascript
-{
-  "type": "excalidraw",
-  "version": 2,
-  "elements": [
-    {
-      "id": "unique-id",
-      "type": "rectangle|ellipse|diamond|line|arrow|text|image|freedraw",
-      "x": number,
-      "y": number,
-      "width": number,
-      "height": number,
-      "angle": number,
-      "strokeColor": "#RRGGBB",
-      "backgroundColor": "#RRGGBB",
-      "fillStyle": "solid|hachure|cross-hatch|transparent",
-      "strokeWidth": number,
-      "strokeStyle": "solid|dashed|dotted",
-      "roughness": number,
-      "opacity": number,
-      "points": [[x, y], ...], // 用于线条
-      "text": "string",         // 文本内容
-      "fontSize": number,
-      "fontFamily": number,
-      "textAlign": "left|center|right",
-      "verticalAlign": "top|middle|bottom",
-      "fileId": "string"        // 图片元素
-    }
-  ],
-  "appState": {
-    "viewBackgroundColor": "#RRGGBB",
-    "gridSize": number|null
-  },
-  "files": {
-    "file-id": {
-      "id": "string",
-      "mimeType": "image/...",
-      "dataURL": "data:image/...;base64,..."
-    }
-  }
-}
-```
-
-## 环境配置
-
-| 变量名 | 默认值 | 描述 |
-|--------|--------|------|
-| `PORT` | 3000 | 服务端口 |
-| `HOST` | 0.0.0.0 | 监听地址 |
-| `NODE_ENV` | development | 运行环境 |
-| `RENDERER_POOL_SIZE` | 5 | 渲染器池最大大小 |
-| `RENDERER_POOL_MIN_SIZE` | 1 | 渲染器池最小大小 |
-| `MAX_REQUEST_SIZE` | 50mb | 最大请求体大小 |
-| `MAX_FILE_SIZE` | 10485760 | 最大文件大小（10MB） |
-| `REDIS_URL` | - | Redis 连接字符串 |
-| `CACHE_TTL` | 3600 | 缓存过期时间（秒） |
-| `ALLOWED_ORIGINS` | * | CORS 允许的源 |
-
-## 性能优化
-
-### 渲染器池
-
-服务使用渲染器池来管理并发请求：
-- 池大小可根据服务器配置调整
-- 自动扩容和收缩
-- 内存使用优化
-
-### 缓存机制
-
-- Redis 缓存渲染结果
-- 基于内容哈希的缓存键
-- 可配置缓存过期时间
-
-### 监控指标
-
-```bash
-# 获取性能统计
-curl http://localhost:3000/stats
-
-# 健康检查
-curl http://localhost:3000/health
-```
-
-## 部署指南
-
-### Docker 部署
-
-```bash
-# 构建镜像
-docker build -t your-registry/excalidraw-api:latest .
-
-# 推送镜像
-docker push your-registry/excalidraw-api:latest
-```
-
-### Kubernetes 部署
-
-```yaml
-apiVersion: apps/v1
-kind: Deployment
-metadata:
-  name: excalidraw-api
-spec:
-  replicas: 3
-  selector:
-    matchLabels:
-      app: excalidraw-api
-  template:
-    spec:
-      containers:
-      - name: excalidraw-api
-        image: your-registry/excalidraw-api:latest
-        ports:
-        - containerPort: 3000
-        env:
-        - name: NODE_ENV
-          value: "production"
-        - name: REDIS_URL
-          value: "redis://redis-service:6379"
-        resources:
-          requests:
-            memory: "512Mi"
-            cpu: "250m"
-          limits:
-            memory: "2Gi"
-            cpu: "1000m"
-        livenessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 30
-          periodSeconds: 10
-        readinessProbe:
-          httpGet:
-            path: /health
-            port: 3000
-          initialDelaySeconds: 5
-          periodSeconds: 5
-```
-
-## 故障排除
+## 🔍 故障排除
 
 ### 常见问题
 
-1. **Canvas 依赖错误**
-   ```bash
-   # 确保安装了必要的系统依赖
-   apk add cairo-dev jpeg-dev pango-dev
-   ```
+1. **页面显示"React加载失败"**
+   - 确保所有JS文件在正确位置
+   - 检查浏览器控制台错误信息
+   - 尝试重新启动服务器
 
-2. **内存不足**
-   ```bash
-   # 减少渲染器池大小
-   export RENDERER_POOL_SIZE=2
-   ```
+2. **浏览器安全限制**
+   - 使用 `http://localhost:3000` 而不是 `file://` 协议
+   - 确保服务器正常运行
 
-3. **Redis 连接失败**
-   ```bash
-   # 检查 Redis 服务状态
-   docker-compose logs redis
-   ```
+3. **导出PNG失败**
+   - 检查浏览器是否支持Canvas API
+   - 确保Excalidraw API已初始化完成
 
-### 日志查看
+4. **服务器启动失败**
+   - 检查端口3000是否被占用
+   - 确保Node.js已正确安装
 
-```bash
-# Docker 日志
-docker-compose logs -f excalidraw-api
+### 调试技巧
+- 打开浏览器开发者工具查看控制台错误
+- 检查网络面板确认JS文件加载成功
+- 使用测试页面验证库文件是否正常
 
-# 应用日志
-tail -f logs/app.log
-```
+## 🤝 贡献
 
-## 开发指南
+欢迎提交问题和改进建议！
 
-### 运行测试
+## 📄 许可证
 
-```bash
-# 运行所有测试
-npm test
-
-# 运行测试并生成覆盖率报告
-npm run test:coverage
-
-# 监视模式运行测试
-npm run test:watch
-```
-
-### 代码风格
-
-```bash
-# 检查代码风格
-npm run lint
-
-# 自动修复代码风格问题
-npm run lint:fix
-```
-
-### 添加新功能
-
-1. 在 `src/excalidraw-renderer.js` 中添加新的绘制方法
-2. 在 `src/validator.js` 中添加相应的验证规则
-3. 添加单元测试
-4. 更新 API 文档
-
-## 许可证
-
-MIT License - 详见 [LICENSE](LICENSE) 文件
-
-## 贡献
-
-欢迎提交 Issue 和 Pull Request！
-
-## 更新日志
-
-### v1.0.0
-- 初始版本发布
-- 支持基本 Excalidraw 元素渲染
-- 多格式输出支持
-- Docker 容器化部署
+本项目仅供学习和个人使用。

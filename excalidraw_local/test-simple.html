@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Simple React Test</title>
+</head>
+<body>
+    <h1>React Library Test</h1>
+    <div id="app">Loading...</div>
+
+    <!-- 尝试不同方式加载 React -->
+    <script>
+        console.log('开始加载 React...');
+
+        // 方法1: 直接插入script标签
+        function loadScript(src, callback) {
+            var script = document.createElement('script');
+            script.src = src;
+            script.onload = function() {
+                console.log('✅ ' + src + ' 加载成功');
+                callback();
+            };
+            script.onerror = function() {
+                console.error('❌ ' + src + ' 加载失败');
+                callback();
+            };
+            document.head.appendChild(script);
+        }
+
+        // 按顺序加载
+        loadScript('./react.production.min.js', function() {
+            console.log('React 对象:', typeof React !== 'undefined' ? React : 'undefined');
+            console.log('window.React:', typeof window.React !== 'undefined' ? window.React : 'undefined');
+
+            loadScript('./react-dom.production.min.js', function() {
+                console.log('ReactDOM 对象:', typeof ReactDOM !== 'undefined' ? ReactDOM : 'undefined');
+                console.log('window.ReactDOM:', typeof window.ReactDOM !== 'undefined' ? window.ReactDOM : 'undefined');
+
+                // 尝试创建一个简单的React元素
+                if (typeof React !== 'undefined' && typeof ReactDOM !== 'undefined') {
+                    try {
+                        const element = React.createElement('h2', null, 'Hello React!');
+                        const container = document.getElementById('app');
+                        ReactDOM.render(element, container);
+                        console.log('✅ React 工作正常!');
+                    } catch (error) {
+                        console.error('❌ React 创建失败:', error);
+                    }
+                } else {
+                    document.getElementById('app').innerHTML = 'React 加载失败';
+                }
+            });
+        });
+    </script>
+</body>
+</html>

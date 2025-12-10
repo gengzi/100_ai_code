@@ -1,0 +1,486 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excalidraw 渲染测试</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        .container {
+            background: white;
+            border-radius: 8px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        h1, h2 {
+            color: #333;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+        .info {
+            background-color: #d1ecf1;
+            color: #0c5460;
+            border: 1px solid #bee5eb;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            margin: 5px;
+            font-size: 14px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        .image-container {
+            text-align: center;
+            margin: 20px 0;
+            padding: 20px;
+            border: 2px dashed #ddd;
+            border-radius: 8px;
+            background-color: #fafafa;
+        }
+        .rendered-image {
+            max-width: 100%;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+        }
+        .loading {
+            color: #007bff;
+            font-style: italic;
+        }
+        .json-preview {
+            background-color: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 4px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 200px;
+            overflow-y: auto;
+            white-space: pre-wrap;
+            margin: 10px 0;
+        }
+        .test-data-selector {
+            margin: 10px 0;
+        }
+        select {
+            padding: 8px 12px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+            margin: 0 10px;
+        }
+    </style>
+</head>
+<body>
+    <!-- React 和 ReactDOM 库文件 - 使用绝对路径 -->
+    <script src="./react.production.min.js"></script>
+    <script src="./react-dom.production.min.js"></script>
+    <script src="./excalidraw.production.min.js"></script>
+
+    <!-- 检查库加载状态 -->
+    <script>
+        // 等待所有脚本加载完成
+        setTimeout(function() {
+            console.log('=== 检查库加载状态 ===');
+            console.log('React loaded:', typeof React !== 'undefined' ? React : 'undefined');
+            console.log('ReactDOM loaded:', typeof ReactDOM !== 'undefined' ? ReactDOM : 'undefined');
+            console.log('Excalidraw loaded:', typeof ExcalidrawLib !== 'undefined' ? ExcalidrawLib : 'undefined');
+            console.log('window.React loaded:', typeof window.React !== 'undefined' ? window.React : 'undefined');
+            console.log('window.ReactDOM loaded:', typeof window.ReactDOM !== 'undefined' ? window.ReactDOM : 'undefined');
+            console.log('window.ExcalidrawLib loaded:', typeof window.ExcalidrawLib !== 'undefined' ? window.ExcalidrawLib : 'undefined');
+
+            // 检查window.ExcalidrawLib是否存在
+            if (typeof window.ExcalidrawLib !== 'undefined') {
+                console.log('ExcalidrawLib methods:', Object.keys(window.ExcalidrawLib));
+            } else {
+                console.error('ExcalidrawLib 未加载，可能需要检查库文件');
+            }
+
+            // 检查文件大小
+            fetch('react.production.min.js', { method: 'HEAD' })
+                .then(response => console.log('React file size:', response.headers.get('content-length')))
+                .catch(err => console.error('Cannot fetch React file size:', err));
+
+            fetch('react-dom.production.min.js', { method: 'HEAD' })
+                .then(response => console.log('ReactDOM file size:', response.headers.get('content-length')))
+                .catch(err => console.error('Cannot fetch ReactDOM file size:', err));
+
+            fetch('excalidraw.production.min.js', { method: 'HEAD' })
+                .then(response => console.log('Excalidraw file size:', response.headers.get('content-length')))
+                .catch(err => console.error('Cannot fetch Excalidraw file size:', err));
+
+        }, 100);
+    </script>
+
+    <div class="container">
+        <h1>🎨 Excalidraw 渲染服务测试</h1>
+
+        <div id="serverStatus" class="status info">
+            检查服务器状态中...
+        </div>
+
+        <div class="test-data-selector">
+            <label for="dataType">选择测试数据:</label>
+            <select id="dataType">
+                <option value="simple">简单图表</option>
+                <option value="flowchart">流程图</option>
+            </select>
+        </div>
+
+        <div>
+            <button id="testHealthBtn" onclick="testHealth()">🏥 测试健康检查</button>
+            <button id="testRenderBtn" onclick="testRender()">🎯 测试图表渲染</button>
+            <button id="clearBtn" onclick="clearResult()">🗑️ 清除结果</button>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>📊 渲染结果</h2>
+        <div id="renderResult" class="image-container">
+            <p style="color: #666;">点击"测试图表渲染"按钮开始测试</p>
+        </div>
+    </div>
+
+    <div class="container">
+        <h2>🔧 请求数据</h2>
+        <div id="requestData" class="json-preview">
+            请求数据将在渲染后显示在这里
+        </div>
+    </div>
+
+    <script>
+        const SERVER_URL = 'http://localhost:3004';
+
+        // 测试数据
+        const testData = {
+            simple: {
+                "data": {
+                    "elements": [
+                        {
+                            "type": "rectangle",
+                            "id": "rect-1",
+                            "x": 100,
+                            "y": 100,
+                            "width": 200,
+                            "height": 100,
+                            "strokeColor": "#1e40af",
+                            "backgroundColor": "#dbeafe",
+                            "fillStyle": "solid",
+                            "strokeWidth": 2,
+                            "roughness": 1,
+                            "opacity": 100,
+                            "seed": 12345
+                        },
+                        {
+                            "type": "rectangle",
+                            "id": "rect-2",
+                            "x": 400,
+                            "y": 100,
+                            "width": 200,
+                            "height": 100,
+                            "strokeColor": "#dc2626",
+                            "backgroundColor": "#fecaca",
+                            "fillStyle": "solid",
+                            "strokeWidth": 2,
+                            "roughness": 1,
+                            "opacity": 100,
+                            "seed": 12346
+                        },
+                        {
+                            "type": "text",
+                            "id": "text-1",
+                            "x": 150,
+                            "y": 135,
+                            "width": 100,
+                            "height": 30,
+                            "text": "测试输入",
+                            "fontSize": 20,
+                            "fontFamily": 1,
+                            "textAlign": "center",
+                            "verticalAlign": "middle",
+                            "containerId": null,
+                            "originalText": "测试输入",
+                            "baseline": 21,
+                            "strokeColor": "#1e40af",
+                            "backgroundColor": "transparent"
+                        },
+                        {
+                            "type": "text",
+                            "id": "text-2",
+                            "x": 450,
+                            "y": 135,
+                            "width": 100,
+                            "height": 30,
+                            "text": "测试输出",
+                            "fontSize": 20,
+                            "fontFamily": 1,
+                            "textAlign": "center",
+                            "verticalAlign": "middle",
+                            "containerId": null,
+                            "originalText": "测试输出",
+                            "baseline": 21,
+                            "strokeColor": "#dc2626",
+                            "backgroundColor": "transparent"
+                        },
+                        {
+                            "type": "arrow",
+                            "id": "arrow-1",
+                            "x": 300,
+                            "y": 150,
+                            "width": 100,
+                            "height": 0,
+                            "points": [[0, 0], [100, 0]],
+                            "strokeColor": "#374151",
+                            "strokeWidth": 2,
+                            "roughness": 1,
+                            "opacity": 100,
+                            "startArrowhead": null,
+                            "endArrowhead": "arrow",
+                            "seed": 12348
+                        }
+                    ],
+                    "appState": {
+                        "viewBackgroundColor": "#ffffff",
+                        "currentItemStrokeColor": "#000000",
+                        "currentItemBackgroundColor": "transparent",
+                        "zoom": { "value": 1 },
+                        "scrollX": 0,
+                        "scrollY": 0
+                    },
+                    "files": {}
+                }
+            },
+            flowchart: {
+                "data": {
+                    "elements": [
+                        {
+                            "type": "rectangle",
+                            "id": "start",
+                            "x": 50,
+                            "y": 50,
+                            "width": 160,
+                            "height": 60,
+                            "strokeColor": "#16a34a",
+                            "backgroundColor": "#bbf7d0",
+                            "fillStyle": "solid",
+                            "strokeWidth": 2,
+                            "roughness": 1,
+                            "opacity": 100,
+                            "seed": 1001,
+                            "roundness": { "type": 3, "value": 16 }
+                        },
+                        {
+                            "type": "text",
+                            "id": "start-text",
+                            "x": 110,
+                            "y": 65,
+                            "width": 40,
+                            "height": 30,
+                            "text": "开始",
+                            "fontSize": 20,
+                            "fontFamily": 1,
+                            "textAlign": "center",
+                            "verticalAlign": "middle",
+                            "containerId": null,
+                            "originalText": "开始",
+                            "baseline": 21,
+                            "strokeColor": "#16a34a",
+                            "backgroundColor": "transparent"
+                        },
+                        {
+                            "type": "rectangle",
+                            "id": "process1",
+                            "x": 50,
+                            "y": 170,
+                            "width": 160,
+                            "height": 80,
+                            "strokeColor": "#2563eb",
+                            "backgroundColor": "#bfdbfe",
+                            "fillStyle": "solid",
+                            "strokeWidth": 2,
+                            "roughness": 1,
+                            "opacity": 100,
+                            "seed": 1002
+                        },
+                        {
+                            "type": "text",
+                            "id": "process1-text",
+                            "x": 60,
+                            "y": 185,
+                            "width": 140,
+                            "height": 50,
+                            "text": "数据处理",
+                            "fontSize": 16,
+                            "fontFamily": 1,
+                            "textAlign": "center",
+                            "verticalAlign": "middle",
+                            "containerId": null,
+                            "originalText": "数据处理",
+                            "baseline": 21,
+                            "strokeColor": "#2563eb",
+                            "backgroundColor": "transparent"
+                        },
+                        {
+                            "type": "arrow",
+                            "id": "arrow1",
+                            "x": 130,
+                            "y": 110,
+                            "width": 0,
+                            "height": 60,
+                            "points": [[0, 0], [0, 60]],
+                            "strokeColor": "#374151",
+                            "strokeWidth": 2,
+                            "roughness": 1,
+                            "opacity": 100,
+                            "startArrowhead": null,
+                            "endArrowhead": "arrow",
+                            "seed": 2001
+                        }
+                    ],
+                    "appState": {
+                        "viewBackgroundColor": "#f8fafc",
+                        "currentItemStrokeColor": "#000000",
+                        "currentItemBackgroundColor": "transparent",
+                        "zoom": { "value": 1 },
+                        "scrollX": 0,
+                        "scrollY": 0
+                    },
+                    "files": {}
+                }
+            }
+        };
+
+        // 页面加载时检查服务器状态
+        window.onload = function() {
+            testHealth();
+        };
+
+        // 测试健康检查
+        async function testHealth() {
+            const statusEl = document.getElementById('serverStatus');
+            const btn = document.getElementById('testHealthBtn');
+
+            btn.disabled = true;
+            statusEl.className = 'status info';
+            statusEl.textContent = '检查服务器状态中...';
+
+            try {
+                const response = await fetch(`${SERVER_URL}/health`);
+                const result = await response.json();
+
+                if (response.ok) {
+                    statusEl.className = 'status success';
+                    statusEl.innerHTML = `✅ 服务器运行正常<br>
+                    状态: ${result.status}<br>
+                    版本: ${result.version}<br>
+                    运行时间: ${Math.floor(result.uptime)}秒`;
+                } else {
+                    throw new Error(result.message || '健康检查失败');
+                }
+            } catch (error) {
+                statusEl.className = 'status error';
+                statusEl.innerHTML = `❌ 服务器连接失败<br>错误: ${error.message}<br>
+                请确保服务器在 ${SERVER_URL} 运行`;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // 测试渲染
+        async function testRender() {
+            const resultEl = document.getElementById('renderResult');
+            const dataEl = document.getElementById('requestData');
+            const btn = document.getElementById('testRenderBtn');
+            const dataType = document.getElementById('dataType').value;
+            const requestData = testData[dataType];
+
+            btn.disabled = true;
+            resultEl.innerHTML = '<p class="loading">🔄 正在渲染图表，请稍候...</p>';
+            dataEl.textContent = '请求数据将在渲染后显示在这里';
+
+            try {
+                // 显示请求数据
+                dataEl.textContent = JSON.stringify(requestData, null, 2);
+
+                // 发送渲染请求
+                const response = await fetch(`${SERVER_URL}/render`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(requestData)
+                });
+
+                if (response.ok) {
+                    // 获取图片数据
+                    const imageBlob = await response.blob();
+                    const imageUrl = URL.createObjectURL(imageBlob);
+
+                    // 显示渲染结果
+                    resultEl.innerHTML = `
+                        <h3 style="color: #28a745; margin-top: 0;">✅ 渲染成功！</h3>
+                        <p>渲染时间: ${response.headers.get('X-Render-Time')}ms</p>
+                        <p>元素数量: ${response.headers.get('X-Elements-Count')}</p>
+                        <img src="${imageUrl}" alt="渲染的图表" class="rendered-image" />
+                        <br>
+                        <a href="${imageUrl}" download="excalidraw-render-${Date.now()}.png"
+                           style="display: inline-block; margin-top: 10px; color: #007bff; text-decoration: none;">
+                            💾 下载图片
+                        </a>
+                    `;
+                } else {
+                    const error = await response.json();
+                    throw new Error(error.message || error.error || '渲染失败');
+                }
+            } catch (error) {
+                resultEl.innerHTML = `
+                    <div class="error" style="margin: 0;">
+                        ❌ 渲染失败<br>
+                        错误信息: ${error.message}
+                    </div>
+                `;
+            } finally {
+                btn.disabled = false;
+            }
+        }
+
+        // 清除结果
+        function clearResult() {
+            document.getElementById('renderResult').innerHTML =
+                '<p style="color: #666;">点击"测试图表渲染"按钮开始测试</p>';
+            document.getElementById('requestData').textContent =
+                '请求数据将在渲染后显示在这里';
+        }
+    </script>
+</body>
+</html>

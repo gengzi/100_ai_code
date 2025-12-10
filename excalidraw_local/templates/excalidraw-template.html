@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Excalidraw Renderer</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      overflow: hidden;
+    }
+
+    #app {
+      width: 100vw;
+      height: 100vh;
+      position: relative;
+    }
+
+    .loading-overlay {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(255, 255, 255, 0.95);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+      backdrop-filter: blur(10px);
+    }
+
+    .loading-content {
+      text-align: center;
+    }
+
+    .loading-spinner {
+      width: 50px;
+      height: 50px;
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      animation: spin 1s linear infinite;
+      margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .loading-text {
+      color: #333;
+      font-size: 16px;
+      font-weight: 500;
+    }
+
+    .error-message {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      background: #ff4757;
+      color: white;
+      padding: 20px 30px;
+      border-radius: 8px;
+      font-weight: 500;
+      z-index: 2000;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.2);
+    }
+  </style>
+</head>
+<body>
+  <div id="app">
+    <div class="loading-overlay" id="loading">
+      <div class="loading-content">
+        <div class="loading-spinner"></div>
+        <div class="loading-text">正在渲染图表...</div>
+      </div>
+    </div>
+  </div>
+
+  <script src="../react.production.min.js"></script>
+  <script src="../react-dom.production.min.js"></script>
+  <script src="../excalidraw.production.min.js"></script>
+  <script>
+    // 必须手动挂到全局，否则 Excalidraw 内部找不到
+    window.React = React;
+    window.ReactDOM = ReactDOM;
+
+    // // 等待所有脚本加载完成
+    // window.addEventListener('load', function() {
+    //   console.log('React loaded:', typeof React);
+    //   console.log('Excalidraw loaded:', typeof window.ExcalidrawLib);
+    // });
+    //
+    // // 从全局变量获取 React hooks 和 Excalidraw 组件
+    // const { useState, useEffect, useRef } = React;
+    // const { Excalidraw, exportToCanvas } = window.ExcalidrawLib;
+    // 这一步千万不能忘！！
+    // window.React = React;
+    // window.ReactDOM = ReactDOM;
+
+    // Excalidraw 暴露的全局对象
+    const { Excalidraw, exportToCanvas } = window.ExcalidrawLib;
+    const { useState, useEffect, useRef } =  window.React;
+
+    const App = () => {
+      const excalidrawRef = useRef(null);
+      const [error, setError] = useState(null);
+
+      useEffect(() => {
+        let retryCount = 0;
+        const maxRetries = 10;
+        const retryInterval = 2000;
+
+        const attemptExport = async () => {
+          try {
+            console.log(`Export attempt ${retryCount + 1}/${maxRetries}`);
+
+            if (excalidrawRef.current) {
+              const elements = excalidrawRef.current.getSceneElements();
+              const appState = excalidrawRef.current.getAppState();
+              const files = excalidrawRef.current.getFiles();
+
+              console.log('Elements found:', elements ? elements.length : 0);
+
+              if (!elements || elements.length === 0) {
+                throw new Error('No elements to render');
+              }
+
+              // 隐藏加载提示
+              const loadingElement = document.getElementById('loading');
+              if (loadingElement) {
+                loadingElement.style.display = 'none';
+              }
+
+              const canvas = await exportToCanvas({
+                elements: elements,
+                appState: {
+                  ...appState,
+                  viewBackgroundColor: appState.viewBackgroundColor || '#ffffff',
+                  currentItemStrokeColor: '#000000',
+                  currentItemBackgroundColor: 'transparent',
+                  zoom: { value: 1 },
+                  scrollX: 0,
+                  scrollY: 0,
+                },
+                files: files,
+                exportPadding: 20,
+                scale: 2,
+                shouldAddWatermark: false,
+              });
+
+              canvas.toBlob((blob) => {
+                const reader = new FileReader();
+                reader.onloadend = () => {
+                  window.exportBlob = reader.result;
+                  window.exportReady = true;
+                  window.exportSuccess = true;
+                  console.log('Export completed successfully');
+                };
+                reader.readAsDataURL(blob);
+              }, 'image/png', 0.95);
+            } else {
+              throw new Error('Excalidraw component not ready');
+            }
+          } catch (err) {
+            console.error(`Export attempt ${retryCount + 1} failed:`, err);
+            retryCount++;
+
+            if (retryCount >= maxRetries) {
+              setError(`渲染失败: ${err.message} (重试 ${maxRetries} 次后放弃)`);
+              window.exportError = err.message;
+              window.exportReady = true;
+              window.exportSuccess = false;
+            } else {
+              // 继续重试
+              setTimeout(attemptExport, retryInterval);
+            }
+          }
+        };
+
+        // 初始延迟后开始尝试导出
+        const initialTimer = setTimeout(attemptExport, 5000);
+
+        return () => {
+          clearTimeout(initialTimer);
+        };
+      }, []);
+
+      if (error) {
+        return React.createElement('div', {
+          className: 'error-message'
+        }, `渲染错误: ${error}`);
+      }
+
+      return React.createElement(Excalidraw, {
+        ref: excalidrawRef,
+        initialData: window.initialData,
+        onChange: () => {},
+        viewModeEnabled: true,
+        zenModeEnabled: true,
+        gridModeEnabled: false,
+        theme: 'light',
+      });
+    };
+
+    ReactDOM.render(React.createElement(App), document.getElementById('app'));
+  </script>
+</body>
+</html>

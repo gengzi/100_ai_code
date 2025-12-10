@@ -1,23 +1,41 @@
-const express = require('express');
-const multer = require('multer');
+  const express = require('express');
+const puppeteer = require('puppeteer');
 const cors = require('cors');
 const helmet = require('helmet');
 const compression = require('compression');
-const morgan = require('morgan');
-const crypto = require('crypto');
-const { RendererPool } = require('./renderer-pool');
-const {
-  validateExcalidrawData,
-  validateRenderOptions,
-  cleanAndOptimizeData
-} = require('./validator');
+const winston = require('winston');
+const fs = require('fs').promises;
+const path = require('path');
 
-// 创建Express应用
+// 配置日志
+const logger = winston.createLogger({
+  level: 'info',
+  format: winston.format.combine(
+    winston.format.timestamp(),
+    winston.format.errors({ stack: true }),
+    winston.format.json()
+  ),
+  transports: [
+    new winston.transports.File({ filename: 'logs/error.log', level: 'error' }),
+    new winston.transports.File({ filename: 'logs/combined.log' }),
+  ],
+});
+
+if (process.env.NODE_ENV !== 'production') {
+  logger.add(new winston.transports.Console({
+    format: winston.format.combine(
+      winston.format.colorize(),
+      winston.format.simple()
+    )
+  }));
+}
+
 const app = express();
+const PORT = process.env.PORT || 3004; // 改为3005端口以避免冲突
 
 // 中间件配置
 app.use(helmet({
-  contentSecurityPolicy: false, // API服务不需要CSP
+  crossOriginResourcePolicy: { policy: "cross-origin" }
 }));
 app.use(compression());
 app.use(cors({
@@ -25,547 +43,324 @@ app.use(cors({
   credentials: true
 }));
 
-// 日志中间件
-if (process.env.NODE_ENV !== 'test') {
-  app.use(morgan('combined'));
-}
+// 静态文件服务 - 提供 node_modules 访问
+app.use('/node_modules', express.static(path.join(__dirname, '../node_modules')));
 
-// 解析请求体
-app.use(express.json({ limit: process.env.MAX_REQUEST_SIZE || '50mb' }));
-app.use(express.urlencoded({ extended: true, limit: process.env.MAX_REQUEST_SIZE || '50mb' }));
+// 静态文件服务 - 提供根目录文件访问（用于 React 文件）
+app.use(express.static(path.join(__dirname, '../')));
 
-// 文件上传配置
-const upload = multer({
-  storage: multer.memoryStorage(),
-  limits: {
-    fileSize: parseInt(process.env.MAX_FILE_SIZE) || 10 * 1024 * 1024, // 10MB
-    files: 1
-  },
-  fileFilter: (req, file, cb) => {
-    // 只允许JSON文件
-    if (file.mimetype === 'application/json' || file.originalname.endsWith('.json')) {
-      cb(null, true);
-    } else {
-      cb(new Error('只支持JSON文件'), false);
-    }
-  }
-});
+// 静态文件服务 - 提供 js 目录访问
+app.use('/js', express.static(path.join(__dirname, '../js')));
+app.use('/static', express.static(path.join(__dirname, '../static')));
 
-// 创建渲染器池
-const rendererPool = new RendererPool({
-  maxSize: parseInt(process.env.RENDERER_POOL_SIZE) || 5,
-  minSize: parseInt(process.env.RENDERER_POOL_MIN_SIZE) || 1
-});
+app.use(express.json({ limit: '50mb' }));
+app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// Redis缓存（可选）
-let redisClient = null;
-if (process.env.REDIS_URL) {
-  try {
-    const redis = require('redis');
-    redisClient = redis.createClient({ url: process.env.REDIS_URL });
-    redisClient.connect().then(() => {
-      console.log('Redis连接成功');
-    }).catch(error => {
-      console.warn('Redis连接失败:', error.message);
-    });
-  } catch (error) {
-    console.warn('Redis模块加载失败:', error.message);
-  }
-}
-
-// 请求计数器
-let requestCount = 0;
-let errorCount = 0;
-
-/**
- * 生成缓存键
- * @param {Object} data - 请求数据
- * @param {Object} options - 渲染选项
- * @returns {string} 缓存键
- */
-function generateCacheKey(data, options) {
-  const cacheData = {
-    data: data,
-    options: options,
-    version: '1.0' // 缓存版本，用于失效旧缓存
-  };
-  const hash = crypto.createHash('md5');
-  hash.update(JSON.stringify(cacheData));
-  return `excalidraw:${hash.digest('hex')}`;
-}
-
-/**
- * 错误处理中间件
- */
-function errorHandler(error, req, res, next) {
-  errorCount++;
-  console.error(`[${new Date().toISOString()}] 渲染错误:`, error);
-
-  // 客户端错误
-  if (error.name === 'ValidationError' || error.message.includes('Invalid data')) {
-    return res.status(400).json({
-      error: 'Invalid data',
-      message: error.message,
-      timestamp: new Date().toISOString()
-    });
-  }
-
-  // 超时错误
-  if (error.message.includes('超时')) {
-    return res.status(408).json({
-      error: 'Request timeout',
-      message: '渲染请求超时，请稍后重试',
-      timestamp: new Date().toISOString()
-    });
-  }
-
-  // 资源不足错误
-  if (error.message.includes('资源不足') || error.message.includes('内存不足')) {
-    return res.status(503).json({
-      error: 'Service unavailable',
-      message: '服务器资源不足，请稍后重试',
-      timestamp: new Date().toISOString()
-    });
-  }
-
-  // 其他错误
-  res.status(500).json({
-    error: 'Internal server error',
-    message: process.env.NODE_ENV === 'development' ? error.message : '渲染过程中发生错误',
+// 请求日志中间件
+app.use((req, res, next) => {
+  logger.info(`${req.method} ${req.path}`, {
+    ip: req.ip,
+    userAgent: req.get('User-Agent'),
     timestamp: new Date().toISOString()
   });
+  next();
+});
+
+// 缓存 HTML 模板
+let htmlTemplate = null;
+
+async function loadTemplate() {
+  try {
+    const templatePath = path.join(__dirname, '../templates/excalidraw-template.html');
+    htmlTemplate = await fs.readFile(templatePath, 'utf8');
+    logger.info('HTML template loaded successfully');
+  } catch (error) {
+    logger.error('Failed to load HTML template:', error);
+    throw error;
+  }
 }
 
-/**
- * 主渲染接口 - JSON数据渲染
- */
-app.post('/api/render', async (req, res, next) => {
+// 验证 Excalidraw 数据格式
+function validateExcalidrawData(data) {
+  // 检查数据是否存在且为对象
+  if (!data || typeof data !== 'object') {
+    throw new Error('Invalid data format: data must be an object');
+  }
+
+  // 检查是否有 elements 数组
+  if (!data.elements || !Array.isArray(data.elements)) {
+    throw new Error('Missing or invalid elements array in data');
+  }
+
+  // 检查 elements 数组是否为空
+  if (data.elements.length === 0) {
+    throw new Error('Empty elements array - nothing to render');
+  }
+
+  // 基本元素验证
+  for (let i = 0; i < data.elements.length; i++) {
+    const element = data.elements[i];
+    if (!element || typeof element !== 'object') {
+      throw new Error(`Invalid element at index ${i}: element must be an object`);
+    }
+    if (!element.type) {
+      throw new Error(`Invalid element at index ${i}: missing type`);
+    }
+    if (!element.id) {
+      throw new Error(`Invalid element at index ${i}: missing id`);
+    }
+  }
+
+  return true;
+}
+
+// 渲染选项配置
+const renderOptions = {
+  viewport: { width: 1920, height: 1080 },
+  timeout: 120000, // 增加到 2 分钟
+  waitUntil: 'networkidle2'
+};
+
+// 主要的渲染端点
+app.post('/render', async (req, res) => {
   const startTime = Date.now();
-  requestCount++;
+
 
   try {
-    // 验证渲染选项
-    const optionsValidation = validateRenderOptions(req.query);
-    if (!optionsValidation.isValid) {
-      return res.status(400).json({
-        error: 'Invalid options',
-        details: optionsValidation.errors,
-        timestamp: new Date().toISOString()
+    // 检查请求体是否存在
+    if (!req.body || typeof req.body !== 'object') {
+      throw new Error('Invalid request body: expected JSON object');
+    }
+
+    const { data, options = {} } = req.body;
+
+    // 检查 data 是否存在
+    if (data === undefined || data === null) {
+      throw new Error('Missing "data" property in request body');
+    }
+
+    // 验证输入数据
+    validateExcalidrawData(data);
+
+    // 合并渲染选项
+    const finalOptions = { ...renderOptions, ...options };
+
+    // 启动 Puppeteer 浏览器
+    logger.info('Launching browser for rendering...');
+    const browser = await puppeteer.launch({
+      headless: false, // 显示浏览器窗口
+      devtools: true,  // 打开开发者工具
+      slowMo: 100,     // 减慢操作速度以便观察
+      args: [
+        '--no-sandbox',
+        '--disable-setuid-sandbox',
+        '--disable-dev-shm-usage',
+        '--disable-accelerated-2d-canvas',
+        '--no-first-run',
+        '--no-zygote',
+        '--start-maximized', // 最大化窗口
+        '--window-position=0,0',
+        '--window-size=1920,1080',
+        '--allow-file-access-from-files',   // 关键
+        '--disable-web-security'            // 关键
+      ],
+      defaultViewport: null // 使用浏览器默认视口
+    });
+
+    const page = await browser.newPage();
+
+    // 设置用户代理
+    await page.setUserAgent('ExcalidrawRenderer/1.0');
+
+    // 注入数据到 HTML 模板
+    const fullHtml = htmlTemplate.replace(
+      '<script type="module">',
+      `<script>window.initialData = ${JSON.stringify(data)};</script><script type="module">`
+    );
+
+    // 设置页面内容
+    logger.info('Setting page content...');
+    await page.setContent(fullHtml, {
+      waitUntil: 'networkidle2',
+      timeout: finalOptions.timeout
+    });
+
+    // 监听控制台输出
+    page.on('console', msg => {
+      logger.info('Browser console:', {
+        type: msg.type(),
+        text: msg.text(),
+        location: msg.location()
       });
+    });
+
+    // 监听页面错误
+    page.on('pageerror', error => {
+      logger.error('Browser page error:', error.message);
+    });
+
+    // 等待一下让页面初始化
+    await page.waitForTimeout(2000);
+
+    // 等待渲染完成
+    logger.info('Waiting for rendering to complete...');
+    await page.waitForFunction(() => window.exportReady, {
+      timeout: finalOptions.timeout
+    });
+
+    // 检查渲染是否成功
+    const exportSuccess = await page.evaluate(() => window.exportSuccess);
+
+    if (!exportSuccess) {
+      const errorMessage = await page.evaluate(() => window.exportError);
+      throw new Error(`Rendering failed: ${errorMessage}`);
     }
 
-    const options = optionsValidation.data;
+    // 获取渲染结果
+    const base64Png = await page.evaluate(() => window.exportBlob);
+    await browser.close();
 
-    // 生成缓存键
-    const cacheKey = generateCacheKey(req.body, options);
+    const renderTime = Date.now() - startTime;
+    logger.info(`Rendering completed successfully in ${renderTime}ms`);
 
-    // 检查缓存
-    if (redisClient) {
-      try {
-        const cachedResult = await redisClient.get(cacheKey);
-        if (cachedResult) {
-          const buffer = Buffer.from(cachedResult, 'base64');
-          const contentType = `image/${options.format}`;
+    // 返回图片数据
+    const imageBuffer = Buffer.from(base64Png.split(',')[1], 'base64');
 
-          res.set({
-            'Content-Type': contentType,
-            'Content-Length': buffer.length,
-            'X-Cache': 'HIT',
-            'X-Render-Time': `${Date.now() - startTime}ms`
-          });
-
-          return res.send(buffer);
-        }
-      } catch (cacheError) {
-        console.warn('缓存读取失败:', cacheError.message);
-      }
-    }
-
-    // 验证数据
-    const validation = validateExcalidrawData(req.body);
-    if (!validation.isValid) {
-      return res.status(400).json({
-        error: 'Invalid data',
-        details: validation.errors,
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    // 清理和优化数据
-    const cleanedData = cleanAndOptimizeData(req.body);
-
-    // 如果有警告，添加到响应头
-    if (validation.warnings.length > 0) {
-      res.set('X-Warnings', JSON.stringify(validation.warnings));
-    }
-
-    // 计算最优画布尺寸
-    const canvasSize = calculateOptimalCanvasSize(cleanedData);
-    options.width = options.width || canvasSize.width;
-    options.height = options.height || canvasSize.height;
-
-    // 执行渲染
-    const buffer = await rendererPool.render(cleanedData, options);
-
-    // 缓存结果
-    if (redisClient) {
-      try {
-        await redisClient.setex(
-          cacheKey,
-          parseInt(process.env.CACHE_TTL) || 3600,
-          buffer.toString('base64')
-        );
-      } catch (cacheError) {
-        console.warn('缓存写入失败:', cacheError.message);
-      }
-    }
-
-    // 返回结果
-    const contentType = options.format === 'svg' ? 'image/svg+xml' : `image/${options.format}`;
     res.set({
-      'Content-Type': contentType,
-      'Content-Length': buffer.length,
-      'X-Cache': 'MISS',
-      'X-Render-Time': `${Date.now() - startTime}ms`,
-      'X-Elements-Count': cleanedData.elements.length.toString()
+      'Content-Type': 'image/png',
+      'Content-Length': imageBuffer.length,
+      'Cache-Control': 'public, max-age=3600',
+      'X-Render-Time': renderTime,
+      'X-Elements-Count': data.elements.length
     });
 
-    res.send(buffer);
+    res.send(imageBuffer);
 
   } catch (error) {
-    next(error);
-  }
-});
-
-/**
- * 文件上传渲染接口
- */
-app.post('/api/render/file', upload.single('file'), async (req, res, next) => {
-  const startTime = Date.now();
-  requestCount++;
-
-  try {
-    if (!req.file) {
-      return res.status(400).json({
-        error: 'No file uploaded',
-        message: '请上传Excalidraw JSON文件',
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    // 解析JSON文件
-    let excalidrawData;
-    try {
-      const jsonContent = req.file.buffer.toString('utf-8');
-      excalidrawData = JSON.parse(jsonContent);
-    } catch (parseError) {
-      return res.status(400).json({
-        error: 'Invalid JSON file',
-        message: `JSON解析失败: ${parseError.message}`,
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    // 验证渲染选项
-    const optionsValidation = validateRenderOptions(req.query);
-    if (!optionsValidation.isValid) {
-      return res.status(400).json({
-        error: 'Invalid options',
-        details: optionsValidation.errors,
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    const options = optionsValidation.data;
-
-    // 处理表单中的选项
-    if (req.body.backgroundColor) {
-      options.backgroundColor = req.body.backgroundColor;
-    }
-    if (req.body.width) {
-      options.width = parseInt(req.body.width);
-    }
-    if (req.body.height) {
-      options.height = parseInt(req.body.height);
-    }
-
-    // 验证数据
-    const validation = validateExcalidrawData(excalidrawData);
-    if (!validation.isValid) {
-      return res.status(400).json({
-        error: 'Invalid data',
-        details: validation.errors,
-        timestamp: new Date().toISOString()
-      });
-    }
-
-    // 清理和优化数据
-    const cleanedData = cleanAndOptimizeData(excalidrawData);
-
-    // 计算画布尺寸
-    const canvasSize = calculateOptimalCanvasSize(cleanedData);
-    options.width = options.width || canvasSize.width;
-    options.height = options.height || canvasSize.height;
-
-    // 执行渲染
-    const buffer = await rendererPool.render(cleanedData, options);
-
-    // 返回结果
-    const contentType = options.format === 'svg' ? 'image/svg+xml' : `image/${options.format}`;
-    res.set({
-      'Content-Type': contentType,
-      'Content-Length': buffer.length,
-      'X-Render-Time': `${Date.now() - startTime}ms`,
-      'X-File-Size': req.file.size.toString()
+    const renderTime = Date.now() - startTime;
+    logger.error('Rendering failed:', {
+      error: error.message,
+      stack: error.stack,
+      renderTime: renderTime
     });
 
-    res.send(buffer);
-
-  } catch (error) {
-    next(error);
-  }
-});
-
-/**
- * 健康检查接口
- */
-app.get('/health', async (req, res) => {
-  try {
-    const poolHealth = rendererPool.healthCheck();
-
-    let redisHealth = { status: 'disabled' };
-    if (redisClient) {
-      try {
-        await redisClient.ping();
-        redisHealth = { status: 'connected' };
-      } catch (error) {
-        redisHealth = { status: 'error', message: error.message };
-      }
-    }
-
-    const isHealthy = poolHealth.healthy && redisHealth.status !== 'error';
-
-    res.status(isHealthy ? 200 : 503).json({
-      status: isHealthy ? 'healthy' : 'unhealthy',
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      version: process.env.npm_package_version || '1.0.0',
-      pool: poolHealth.pool,
-      redis: redisHealth,
-      stats: {
-        totalRequests: requestCount,
-        errorCount: errorCount,
-        successRate: requestCount > 0 ? ((requestCount - errorCount) / requestCount * 100).toFixed(2) + '%' : 'N/A'
-      }
-    });
-
-  } catch (error) {
-    console.error('健康检查失败:', error);
-    res.status(503).json({
-      status: 'unhealthy',
-      timestamp: new Date().toISOString(),
-      error: error.message
-    });
-  }
-});
-
-/**
- * 性能统计接口
- */
-app.get('/stats', async (req, res) => {
-  try {
-    const poolStats = rendererPool.getPerformanceReport();
-
-    res.json({
-      timestamp: new Date().toISOString(),
-      uptime: process.uptime(),
-      memory: process.memoryUsage(),
-      pool: poolStats,
-      requests: {
-        total: requestCount,
-        errors: errorCount,
-        successRate: requestCount > 0 ? ((requestCount - errorCount) / requestCount * 100).toFixed(2) + '%' : 'N/A'
-      },
-      system: {
-        nodeVersion: process.version,
-        platform: process.platform,
-        arch: process.arch
-      }
-    });
-
-  } catch (error) {
-    console.error('获取统计信息失败:', error);
     res.status(500).json({
-      error: 'Failed to get stats',
-      message: error.message
+      error: 'Rendering failed',
+      message: error.message,
+      renderTime: renderTime
     });
   }
 });
 
-/**
- * API文档接口
- */
-app.get('/api', (req, res) => {
+// 健康检查端点
+app.get('/health', (req, res) => {
   res.json({
-    name: 'Excalidraw API',
+    status: 'healthy',
+    timestamp: new Date().toISOString(),
     version: '1.0.0',
-    description: 'Excalidraw JSON to image conversion service',
+    uptime: process.uptime()
+  });
+});
+
+// API 文档端点
+app.get('/', (req, res) => {
+  res.json({
+    name: 'Excalidraw Render Service',
+    version: '1.0.0',
+    description: 'Convert Excalidraw JSON data to PNG images',
     endpoints: {
-      'POST /api/render': {
-        description: '渲染Excalidraw JSON数据',
-        contentType: 'application/json',
-        parameters: {
-          query: {
-            format: { type: 'string', enum: ['png', 'jpeg', 'webp', 'svg'], default: 'png' },
-            quality: { type: 'number', min: 1, max: 100, default: 90 },
-            width: { type: 'number', min: 1, max: 4096 },
-            height: { type: 'number', min: 1, max: 4096 }
+      'POST /render': {
+        description: 'Render Excalidraw JSON to PNG image',
+        body: {
+          data: {
+            elements: 'Array of Excalidraw elements',
+            appState: 'Excalidraw application state (optional)',
+            files: 'Files data (optional)'
           },
-          body: {
-            type: 'excalidraw',
-            version: { type: 'number', enum: [1, 2] },
-            elements: { type: 'array' },
-            appState: { type: 'object' },
-            files: { type: 'object' }
+          options: {
+            timeout: 'Rendering timeout in milliseconds (default: 30000)',
+            viewport: { width: 'Viewport width', height: 'Viewport height' }
           }
         },
-        response: 'image/*'
+        response: 'PNG image data'
       },
-      'POST /api/render/file': {
-        description: '上传JSON文件进行渲染',
-        contentType: 'multipart/form-data',
-        parameters: {
-          file: { type: 'file', required: true, format: 'json' },
-          format: { type: 'string', enum: ['png', 'jpeg', 'webp', 'svg'], default: 'png' },
-          quality: { type: 'number', min: 1, max: 100, default: 90 },
-          backgroundColor: { type: 'string', format: 'hex' }
-        },
-        response: 'image/*'
-      },
-      'GET /health': {
-        description: '健康检查',
-        response: 'application/json'
-      },
-      'GET /stats': {
-        description: '获取性能统计',
-        response: 'application/json'
+      'GET /health': 'Health check endpoint'
+    },
+    example: {
+      curl: `curl -X POST http://localhost:${PORT}/render \\
+  -H "Content-Type: application/json" \\
+  -d '{
+    "data": {
+      "elements": [
+        {
+          "type": "rectangle",
+          "id": "rect-1",
+          "x": 100,
+          "y": 100,
+          "width": 200,
+          "height": 100,
+          "strokeColor": "#000000",
+          "backgroundColor": "#fff",
+          "fillStyle": "solid"
+        }
+      ],
+      "appState": {
+        "viewBackgroundColor": "#ffffff"
       }
     }
-  });
-});
-
-/**
- * 根路径重定向到API文档
- */
-app.get('/', (req, res) => {
-  res.redirect('/api');
-});
-
-// 404处理
-app.use('*', (req, res) => {
-  res.status(404).json({
-    error: 'Not found',
-    message: `路径 ${req.method} ${req.originalUrl} 不存在`,
-    timestamp: new Date().toISOString()
+      }'`
+    }
   });
 });
 
 // 错误处理中间件
-app.use(errorHandler);
-
-/**
- * 计算最优画布尺寸
- * @param {Object} data - Excalidraw数据
- * @returns {Object} 画布尺寸
- */
-function calculateOptimalCanvasSize(data) {
-  if (!data.elements || data.elements.length === 0) {
-    return { width: 1920, height: 1080 };
-  }
-
-  let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
-
-  data.elements.forEach(element => {
-    if (element.isDeleted) return;
-
-    const x = element.x || 0;
-    const y = element.y || 0;
-    const width = element.width || 0;
-    const height = element.height || 0;
-
-    minX = Math.min(minX, x);
-    minY = Math.min(minY, y);
-    maxX = Math.max(maxX, x + width);
-    maxY = Math.max(maxY, y + height);
+app.use((err, req, res, next) => {
+  logger.error('Unhandled error:', err);
+  res.status(500).json({
+    error: 'Internal server error',
+    message: process.env.NODE_ENV === 'development' ? err.message : 'Something went wrong'
   });
+});
 
-  // 添加边距
-  const padding = 100;
-  const calculatedWidth = maxX - minX + padding * 2;
-  const calculatedHeight = maxY - minY + padding * 2;
+// 404 处理
+app.use((req, res) => {
+  res.status(404).json({
+    error: 'Not found',
+    message: `Route ${req.method} ${req.path} not found`
+  });
+});
 
-  return {
-    width: Math.max(calculatedWidth, 800),
-    height: Math.max(calculatedHeight, 600)
-  };
-}
-
-/**
- * 优雅关闭处理
- */
-async function gracefulShutdown(signal) {
-  console.log(`收到 ${signal} 信号，开始优雅关闭...`);
-
+// 启动服务器
+async function startServer() {
   try {
-    // 关闭渲染器池
-    await rendererPool.clear();
-    console.log('渲染器池已关闭');
+    // 确保 logs 目录存在
+    await fs.mkdir('logs', { recursive: true });
 
-    // 关闭Redis连接
-    if (redisClient) {
-      await redisClient.quit();
-      console.log('Redis连接已关闭');
-    }
+    // 加载 HTML 模板
+    await loadTemplate();
 
-    console.log('优雅关闭完成');
-    process.exit(0);
+    app.listen(PORT, () => {
+      logger.info(`🚀 Excalidraw Render Service running on http://localhost:${PORT}`);
+      logger.info(`📊 Health check: http://localhost:${PORT}/health`);
+      logger.info(`📚 API docs: http://localhost:${PORT}/`);
+      logger.info(`🎨 Render endpoint: POST http://localhost:${PORT}/render`);
+    });
   } catch (error) {
-    console.error('优雅关闭失败:', error);
+    logger.error('Failed to start server:', error);
     process.exit(1);
   }
 }
 
-// 注册关闭信号监听器
-process.on('SIGTERM', () => gracefulShutdown('SIGTERM'));
-process.on('SIGINT', () => gracefulShutdown('SIGINT'));
-
-// 未捕获异常处理
-process.on('uncaughtException', (error) => {
-  console.error('未捕获的异常:', error);
-  errorCount++;
-  gracefulShutdown('uncaughtException');
+// 优雅关闭
+process.on('SIGTERM', () => {
+  logger.info('SIGTERM received, shutting down gracefully');
+  process.exit(0);
 });
 
-process.on('unhandledRejection', (reason, promise) => {
-  console.error('未处理的Promise拒绝:', reason);
-  errorCount++;
+process.on('SIGINT', () => {
+  logger.info('SIGINT received, shutting down gracefully');
+  process.exit(0);
 });
 
-// 启动服务器
-const PORT = process.env.PORT || 3000;
-const HOST = process.env.HOST || '0.0.0.0';
-
-app.listen(PORT, HOST, () => {
-  console.log(`
-╔═════════════════════════════════════════════════════════════════╗
-║                     Excalidraw API 服务启动成功                      ║
-╠═════════════════════════════════════════════════════════════════╣
-║  服务地址: http://${HOST}:${PORT}                                  ║
-║  API文档:  http://${HOST}:${PORT}/api                              ║
-║  健康检查:  http://${HOST}:${PORT}/health                           ║
-║  性能统计:  http://${HOST}:${PORT}/stats                           ║
-╚═════════════════════════════════════════════════════════════════╝
-  `);
-});
-
-module.exports = app;
+// 启动应用
+startServer();

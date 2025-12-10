@@ -1,0 +1,698 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Excalidraw 本地渲染</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #f5f5f5;
+        }
+
+        .header {
+            background: white;
+            padding: 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .header h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            margin: 20px;
+        }
+
+        .controls button {
+            padding: 10px 20px;
+            background: #4f46e5;
+            color: white;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+
+        .controls button:hover {
+            background: #4338ca;
+        }
+
+        .controls button:disabled {
+            background: #9ca3af;
+            cursor: not-allowed;
+        }
+
+        .main-container {
+            display: flex;
+            gap: 20px;
+            padding: 0 20px 20px;
+        }
+
+        .canvas-container {
+            flex: 1;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            overflow: hidden;
+        }
+
+        .excalidraw-container {
+            width: 100%;
+            height: 600px;
+            position: relative;
+        }
+
+        .sidebar {
+            width: 300px;
+            background: white;
+            border-radius: 8px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            padding: 20px;
+        }
+
+        .sidebar h3 {
+            margin-bottom: 15px;
+            color: #333;
+        }
+
+        .template-selector {
+            margin-bottom: 20px;
+        }
+
+        .template-selector select {
+            width: 100%;
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+
+        .json-editor {
+            width: 100%;
+            height: 300px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: 'Courier New', monospace;
+            font-size: 12px;
+            resize: vertical;
+        }
+
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 20px;
+        }
+
+        .status.success {
+            background: #d1fae5;
+            color: #065f46;
+            border: 1px solid #a7f3d0;
+        }
+
+        .status.error {
+            background: #fee2e2;
+            color: #991b1b;
+            border: 1px solid #fca5a5;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 50px;
+            color: #666;
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <h1>🎨 Excalidraw 本地渲染工具</h1>
+        <p>使用本地JavaScript文件渲染Excalidraw图表</p>
+    </div>
+
+    <div id="status" class="status" style="display: none;"></div>
+
+    <div class="controls">
+        <button onclick="loadTemplate('simple')">加载简单示例</button>
+        <button onclick="loadTemplate('flowchart')">加载流程图</button>
+        <button onclick="renderExcalidraw()">渲染图表</button>
+        <button onclick="exportAsPNG()">导出为PNG</button>
+        <button onclick="clearCanvas()">清空画布</button>
+    </div>
+
+    <div class="main-container">
+        <div class="canvas-container">
+            <div class="excalidraw-container" id="excalidraw">
+                <div class="loading">
+                    <p>正在加载 Excalidraw...</p>
+                    <p id="loading-info">初始化中...</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="sidebar">
+            <h3>📝 图表配置</h3>
+
+            <div class="template-selector">
+                <label for="templateSelect">选择模板:</label>
+                <select id="templateSelect" onchange="loadTemplate(this.value)">
+                    <option value="">自定义</option>
+                    <option value="simple">简单图形</option>
+                    <option value="flowchart">流程图</option>
+                    <option value="mindmap">思维导图</option>
+                </select>
+            </div>
+
+            <div>
+                <label for="jsonInput">JSON 数据:</label>
+                <textarea id="jsonInput" class="json-editor" placeholder="输入或粘贴 Excalidraw JSON 数据..."></textarea>
+            </div>
+        </div>
+    </div>
+
+    <!-- 加载本地 JavaScript 文件 -->
+    <script src="react.production.min.js"></script>
+    <script src="react-dom.production.min.js"></script>
+    <script src="excalidraw.production.min.js"></script>
+
+    <!-- 主要应用逻辑 -->
+    <script>
+        // 全局变量
+        let excalidrawApp = null;
+        let currentData = null;
+
+        // 预定义的模板数据
+        const templates = {
+            simple: {
+                elements: [
+                    {
+                        id: "rect-1",
+                        type: "rectangle",
+                        x: 100,
+                        y: 100,
+                        width: 200,
+                        height: 100,
+                        angle: 0,
+                        strokeColor: "#1e40af",
+                        backgroundColor: "#dbeafe",
+                        fillStyle: "solid",
+                        strokeWidth: 2,
+                        strokeStyle: "solid",
+                        roughness: 1,
+                        opacity: 100,
+                        groupIds: [],
+                        seed: 12345,
+                        frameId: null,
+                        roundness: null,
+                        boundElements: null,
+                        updated: 1,
+                        link: null,
+                        locked: false
+                    },
+                    {
+                        id: "rect-2",
+                        type: "rectangle",
+                        x: 400,
+                        y: 100,
+                        width: 200,
+                        height: 100,
+                        angle: 0,
+                        strokeColor: "#dc2626",
+                        backgroundColor: "#fecaca",
+                        fillStyle: "solid",
+                        strokeWidth: 2,
+                        strokeStyle: "solid",
+                        roughness: 1,
+                        opacity: 100,
+                        groupIds: [],
+                        seed: 12346,
+                        frameId: null,
+                        roundness: null,
+                        boundElements: null,
+                        updated: 1,
+                        link: null,
+                        locked: false
+                    },
+                    {
+                        id: "text-1",
+                        type: "text",
+                        x: 200,
+                        y: 135,
+                        width: 100,
+                        height: 30,
+                        angle: 0,
+                        strokeColor: "#1e40af",
+                        backgroundColor: "transparent",
+                        fillStyle: "solid",
+                        strokeWidth: 2,
+                        strokeStyle: "solid",
+                        roughness: 1,
+                        opacity: 100,
+                        groupIds: [],
+                        seed: 54123,
+                        frameId: null,
+                        roundness: null,
+                        boundElements: null,
+                        updated: 1,
+                        link: null,
+                        locked: false,
+                        text: "输入数据",
+                        fontSize: 20,
+                        fontFamily: 1,
+                        textAlign: "center",
+                        verticalAlign: "middle",
+                        containerId: null,
+                        originalText: "输入数据",
+                        lineHeight: 1.25
+                    },
+                    {
+                        id: "text-2",
+                        type: "text",
+                        x: 500,
+                        y: 135,
+                        width: 100,
+                        height: 30,
+                        angle: 0,
+                        strokeColor: "#dc2626",
+                        backgroundColor: "transparent",
+                        fillStyle: "solid",
+                        strokeWidth: 2,
+                        strokeStyle: "solid",
+                        roughness: 1,
+                        opacity: 100,
+                        groupIds: [],
+                        seed: 45123,
+                        frameId: null,
+                        roundness: null,
+                        boundElements: null,
+                        updated: 1,
+                        link: null,
+                        locked: false,
+                        text: "输出结果",
+                        fontSize: 20,
+                        fontFamily: 1,
+                        textAlign: "center",
+                        verticalAlign: "middle",
+                        containerId: null,
+                        originalText: "输出结果",
+                        lineHeight: 1.25
+                    },
+                    {
+                        id: "arrow-1",
+                        type: "arrow",
+                        x: 300,
+                        y: 150,
+                        width: 100,
+                        height: 0,
+                        angle: 0,
+                        strokeColor: "#374151",
+                        backgroundColor: "transparent",
+                        fillStyle: "hachure",
+                        strokeWidth: 2,
+                        strokeStyle: "solid",
+                        roughness: 1,
+                        opacity: 100,
+                        groupIds: [],
+                        seed: 23456,
+                        frameId: null,
+                        roundness: null,
+                        boundElements: null,
+                        updated: 1,
+                        link: null,
+                        locked: false,
+                        points: [[0, 0], [100, 0]],
+                        lastCommittedPoint: null,
+                        startBinding: null,
+                        endBinding: null,
+                        startArrowhead: null,
+                        endArrowhead: "arrow"
+                    }
+                ],
+                appState: {
+                    viewBackgroundColor: "#ffffff",
+                    currentItemStrokeColor: "#000000",
+                    currentItemBackgroundColor: "transparent",
+                    currentItemFillStyle: "solid",
+                    currentItemStrokeWidth: 2,
+                    currentItemStrokeStyle: "solid",
+                    currentItemRoughness: 1,
+                    currentItemOpacity: 100,
+                    currentItemFontFamily: 1,
+                    currentItemFontSize: 20,
+                    currentItemTextAlign: "left",
+                    currentItemStartArrowhead: null,
+                    currentItemEndArrowhead: "arrow",
+                    zoom: { value: 1 },
+                    scrollX: 0,
+                    scrollY: 0,
+                    gridMode: false
+                },
+                files: {},
+                scrollToContent: false
+            },
+
+            flowchart: {
+                elements: [
+                    {
+                        id: "start",
+                        type: "rectangle",
+                        x: 100,
+                        y: 50,
+                        width: 160,
+                        height: 60,
+                        angle: 0,
+                        strokeColor: "#16a34a",
+                        backgroundColor: "#bbf7d0",
+                        fillStyle: "solid",
+                        strokeWidth: 2,
+                        strokeStyle: "solid",
+                        roughness: 1,
+                        opacity: 100,
+                        groupIds: [],
+                        seed: 1001,
+                        frameId: null,
+                        roundness: { type: 3, value: 16 },
+                        boundElements: null,
+                        updated: 1,
+                        link: null,
+                        locked: false
+                    },
+                    {
+                        id: "start-text",
+                        type: "text",
+                        x: 180,
+                        y: 65,
+                        width: 40,
+                        height: 30,
+                        angle: 0,
+                        strokeColor: "#16a34a",
+                        backgroundColor: "transparent",
+                        fillStyle: "solid",
+                        strokeWidth: 2,
+                        strokeStyle: "solid",
+                        roughness: 1,
+                        opacity: 100,
+                        groupIds: [],
+                        seed: 1002,
+                        frameId: null,
+                        roundness: null,
+                        boundElements: null,
+                        updated: 1,
+                        link: null,
+                        locked: false,
+                        text: "开始",
+                        fontSize: 20,
+                        fontFamily: 1,
+                        textAlign: "center",
+                        verticalAlign: "middle",
+                        containerId: null,
+                        originalText: "开始",
+                        lineHeight: 1.25
+                    },
+                    {
+                        id: "process1",
+                        type: "rectangle",
+                        x: 100,
+                        y: 170,
+                        width: 160,
+                        height: 80,
+                        angle: 0,
+                        strokeColor: "#2563eb",
+                        backgroundColor: "#bfdbfe",
+                        fillStyle: "solid",
+                        strokeWidth: 2,
+                        strokeStyle: "solid",
+                        roughness: 1,
+                        opacity: 100,
+                        groupIds: [],
+                        seed: 1003,
+                        frameId: null,
+                        roundness: null,
+                        boundElements: null,
+                        updated: 1,
+                        link: null,
+                        locked: false
+                    },
+                    {
+                        id: "process1-text",
+                        type: "text",
+                        x: 120,
+                        y: 185,
+                        width: 120,
+                        height: 50,
+                        angle: 0,
+                        strokeColor: "#2563eb",
+                        backgroundColor: "transparent",
+                        fillStyle: "solid",
+                        strokeWidth: 2,
+                        strokeStyle: "solid",
+                        roughness: 1,
+                        opacity: 100,
+                        groupIds: [],
+                        seed: 1004,
+                        frameId: null,
+                        roundness: null,
+                        boundElements: null,
+                        updated: 1,
+                        link: null,
+                        locked: false,
+                        text: "数据处理",
+                        fontSize: 16,
+                        fontFamily: 1,
+                        textAlign: "center",
+                        verticalAlign: "middle",
+                        containerId: null,
+                        originalText: "数据处理",
+                        lineHeight: 1.25
+                    },
+                    {
+                        id: "arrow1",
+                        type: "arrow",
+                        x: 180,
+                        y: 110,
+                        width: 0,
+                        height: 60,
+                        angle: 0,
+                        strokeColor: "#374151",
+                        backgroundColor: "transparent",
+                        fillStyle: "hachure",
+                        strokeWidth: 2,
+                        strokeStyle: "solid",
+                        roughness: 1,
+                        opacity: 100,
+                        groupIds: [],
+                        seed: 2001,
+                        frameId: null,
+                        roundness: null,
+                        boundElements: null,
+                        updated: 1,
+                        link: null,
+                        locked: false,
+                        points: [[0, 0], [0, 60]],
+                        lastCommittedPoint: null,
+                        startBinding: null,
+                        endBinding: null,
+                        startArrowhead: null,
+                        endArrowhead: "arrow"
+                    }
+                ],
+                appState: {
+                    viewBackgroundColor: "#f8fafc",
+                    currentItemStrokeColor: "#000000",
+                    currentItemBackgroundColor: "transparent",
+                    currentItemFillStyle: "solid",
+                    currentItemStrokeWidth: 2,
+                    currentItemStrokeStyle: "solid",
+                    currentItemRoughness: 1,
+                    currentItemOpacity: 100,
+                    currentItemFontFamily: 1,
+                    currentItemFontSize: 20,
+                    currentItemTextAlign: "left",
+                    currentItemStartArrowhead: null,
+                    currentItemEndArrowhead: "arrow",
+                    zoom: { value: 1 },
+                    scrollX: 0,
+                    scrollY: 0,
+                    gridMode: false
+                },
+                files: {},
+                scrollToContent: false
+            }
+        };
+
+        // 等待所有库加载完成
+        function initializeApp() {
+            updateStatus('正在检查库文件...', 'info');
+
+            // 检查 React 是否加载
+            if (typeof React === 'undefined') {
+                updateStatus('❌ React 库未加载', 'error');
+                console.error('React 库未加载');
+                return;
+            }
+
+            // 检查 ReactDOM 是否加载
+            if (typeof ReactDOM === 'undefined') {
+                updateStatus('❌ ReactDOM 库未加载', 'error');
+                console.error('ReactDOM 库未加载');
+                return;
+            }
+
+            // 检查 Excalidraw 是否加载
+            if (typeof ExcalidrawLib === 'undefined') {
+                updateStatus('❌ Excalidraw 库未加载', 'error');
+                console.error('Excalidraw 库未加载');
+                return;
+            }
+
+            updateStatus('✅ 所有库加载成功，正在初始化...', 'success');
+            console.log('React:', React);
+            console.log('ReactDOM:', ReactDOM);
+            console.log('ExcalidrawLib:', ExcalidrawLib);
+
+            // 初始化 Excalidraw
+            setTimeout(() => {
+                try {
+                    const App = () => {
+                        const [excalidrawAPI, setExcalidrawAPI] = React.useState(null);
+
+                        React.useEffect(() => {
+                            if (excalidrawAPI) {
+                                window.excalidrawAPI = excalidrawAPI;
+                                console.log('Excalidraw API 初始化完成');
+                                updateStatus('✅ Excalidraw 初始化成功', 'success');
+                            }
+                        }, [excalidrawAPI]);
+
+                        return React.createElement(ExcalidrawLib.Excalidraw, {
+                            initialData: templates.simple,
+                            onChange: (elements, state) => {
+                                currentData = {
+                                    elements: elements || [],
+                                    appState: state || {},
+                                    files: {},
+                                    scrollToContent: false
+                                };
+                            },
+                            onPointerUpdate: () => {},
+                            viewModeEnabled: false,
+                            zenModeEnabled: false,
+                            gridModeEnabled: false,
+                            excalidrawRef: (api) => setExcalidrawAPI(api)
+                        });
+                    };
+
+                    // 渲染 React 应用
+                    const container = document.getElementById('excalidraw');
+                    ReactDOM.render(React.createElement(App), container);
+
+                    // 隐藏加载信息
+                    const loadingInfo = document.getElementById('loading-info');
+                    if (loadingInfo) {
+                        loadingInfo.style.display = 'none';
+                    }
+
+                } catch (error) {
+                    console.error('Excalidraw 初始化失败:', error);
+                    updateStatus('❌ Excalidraw 初始化失败: ' + error.message, 'error');
+                }
+            }, 500);
+        }
+
+        // 显示状态信息
+        function updateStatus(message, type) {
+            const status = document.getElementById('status');
+            status.textContent = message;
+            status.className = 'status ' + type;
+            status.style.display = 'block';
+
+            if (type === 'success') {
+                setTimeout(() => {
+                    status.style.display = 'none';
+                }, 3000);
+            }
+        }
+
+        // 加载模板
+        function loadTemplate(templateName) {
+            if (!templates[templateName]) {
+                updateStatus('模板不存在', 'error');
+                return;
+            }
+
+            currentData = templates[templateName];
+            const jsonInput = document.getElementById('jsonInput');
+            jsonInput.value = JSON.stringify(currentData, null, 2);
+
+            // 如果 Excalidraw API 可用，更新场景
+            if (window.excalidrawAPI) {
+                window.excalidrawAPI.updateScene(currentData);
+            }
+
+            updateStatus(`已加载模板: ${templateName}`, 'success');
+        }
+
+        // 渲染 Excalidraw
+        function renderExcalidraw() {
+            const jsonInput = document.getElementById('jsonInput');
+            try {
+                const data = JSON.parse(jsonInput.value);
+                currentData = data;
+
+                if (window.excalidrawAPI) {
+                    window.excalidrawAPI.updateScene(data);
+                    updateStatus('渲染成功', 'success');
+                } else {
+                    updateStatus('Excalidraw API 未就绪', 'error');
+                }
+            } catch (error) {
+                updateStatus('JSON 解析错误: ' + error.message, 'error');
+            }
+        }
+
+        // 导出为 PNG
+        async function exportAsPNG() {
+            if (!window.excalidrawAPI) {
+                updateStatus('Excalidraw API 未就绪', 'error');
+                return;
+            }
+
+            try {
+                const blob = await window.excalidrawAPI.exportPng();
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'excalidraw-export.png';
+                a.click();
+                URL.revokeObjectURL(url);
+                updateStatus('PNG 导出成功', 'success');
+            } catch (error) {
+                updateStatus('导出失败: ' + error.message, 'error');
+            }
+        }
+
+        // 清空画布
+        function clearCanvas() {
+            if (window.excalidrawAPI) {
+                window.excalidrawAPI.resetScene();
+                document.getElementById('jsonInput').value = '';
+                currentData = null;
+                updateStatus('画布已清空', 'success');
+            }
+        }
+
+        // 页面加载完成后初始化
+        window.addEventListener('DOMContentLoaded', function() {
+            setTimeout(initializeApp, 1000);
+        });
+    </script>
+</body>
+</html>
