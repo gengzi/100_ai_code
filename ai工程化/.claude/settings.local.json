@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(claude mcp add:*)",
+      "Bash(where git)",
+      "Bash(dir \"E:\\ruanjian\\PortableGit\\bin\\bash.exe\")",
+      "Bash(dir:*)",
+      "WebSearch"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
