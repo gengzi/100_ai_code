@@ -4,8 +4,21 @@
     <option name="autoReloadType" value="SELECTIVE" />
   </component>
   <component name="ChangeListManager">
-    <list default="true" id="5ba3f9ac-e217-4deb-b3fe-c4abd357b8ed" name="Changes" comment="feat(gpu_memory): 更新主入口文件并配置路径别名&#10;&#10;- 将入口文件从 main.clean.tsx 更改为 main.tsx&#10;- 在 vite.config.ts 中添加路径别名配置&#10;- 支持 @ 符号开头的模块导入&#10;- 配置常用目录的快捷引用路径&#10;- 移除旧的测试用主文件引用">
+    <list default="true" id="5ba3f9ac-e217-4deb-b3fe-c4abd357b8ed" name="Changes" comment="chore(deps): 初始化Express应用并配置核心依赖&#10;&#10;- 添加Express应用初始化逻辑&#10;- 配置应用默认设置和中间件&#10;- 设置路由和请求处理流程&#10;- 添加模板引擎支持&#10;- 集成compression和cors模块&#10;- 配置excalidraw相关依赖&#10;- 添加面试模拟系统提示词文件">
+      <change afterPath="$PROJECT_DIR$/ai工程化/Java_AI_Architect_Interview_Questions/.claude/settings.local.json" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ai工程化/Java_AI_Architect_Interview_Questions/07_2024年最新技术趋势/01_Java_AI框架演进与生态发展.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ai工程化/Java_AI_Architect_Interview_Questions/07_2024年最新技术趋势/02_AI微服务架构模式与设计原则.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ai工程化/Java_AI_Architect_Interview_Questions/07_2024年最新技术趋势/03_Java计算机视觉AI框架与图像处理实战.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ai工程化/Java_AI_Architect_Interview_Questions/07_2024年最新技术趋势/04_Java_AI安全与伦理实践指南.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ai工程化/Java_AI_Architect_Interview_Questions/07_2024年最新技术趋势/05_Java_AI性能优化与GPU加速实战.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ai工程化/Java_AI_Architect_Interview_Questions/07_2024年最新技术趋势/06_Java边缘AI与TinyML实战指南.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ai工程化/Java_AI_Architect_Interview_Questions/07_2024年最新技术趋势/07_Java_AI微服务架构与API网关设计.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ai工程化/Java_AI_Architect_Interview_Questions/学习路径规划.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ai工程化/Java_AI_Architect_Interview_Questions/快速开始指南.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ai工程化/Java_AI_Architect_Interview_Questions/技术最佳实践与设计模式.md" afterDir="false" />
+      <change afterPath="$PROJECT_DIR$/ai工程化/Java_AI_Architect_Interview_Questions/项目展示与案例.md" afterDir="false" />
       <change beforePath="$PROJECT_DIR$/.idea/workspace.xml" beforeDir="false" afterPath="$PROJECT_DIR$/.idea/workspace.xml" afterDir="false" />
+      <change beforePath="$PROJECT_DIR$/ai工程化/Java_AI_Architect_Interview_Questions/README.md" beforeDir="false" afterPath="$PROJECT_DIR$/ai工程化/Java_AI_Architect_Interview_Questions/README.md" afterDir="false" />
     </list>
     <option name="SHOW_DIALOG" value="false" />
     <option name="HIGHLIGHT_CONFLICTS" value="true" />
@@ -105,7 +118,8 @@
       <workItem from="1764991338007" duration="710000" />
       <workItem from="1765364624889" duration="72000" />
       <workItem from="1765364712951" duration="416000" />
-      <workItem from="1765419114691" duration="1200000" />
+      <workItem from="1765419114691" duration="1938000" />
+      <workItem from="1765538247770" duration="620000" />
     </task>
     <task id="LOCAL-00001" summary="feat(excalidraw): 初始化项目基础架构和核心渲染功能&#10;&#10;- 添加环境配置文件(.env.example)定义服务器端口、请求大小限制等参数&#10;- 创建.gitignore文件忽略node_modules、日志文件、IDE配置等不必要提交的内容&#10;- 编写API文档(API-DOCUMENTATION.md)详细说明服务使用方法和接口规范&#10;- 新增Docker配置(docker-compose.yml, Dockerfile)支持容器化部署&#10;- 实现Excalidraw数据渲染核心逻辑(src/excalidraw-renderer.js)&#10;- 提供示例图表文件(examples/diagram-with-shapes.json)用于测试验证&#10;- 配置字体资源和日志目录支持图表中文本渲染及运行日志记录&#10;- 设置健康检查和性能监控端点便于服务状态跟踪&#10;- 添加Postman集合配置方便接口调试和文档展示&#10;- 实现Redis缓存集成提升重复渲染请求的响应速度">
       <option name="closed" value="true" />
@@ -131,7 +145,23 @@
       <option name="project" value="LOCAL" />
       <updated>1764329594113</updated>
     </task>
-    <option name="localTasksCounter" value="4" />
+    <task id="LOCAL-00004" summary="feat(ai): 添加JVM内存管理在AI模型训练中的应用文档&#10;&#10;- 新增120道JVM与AI性能优化相关面试题&#10;- 包含基础、进阶、专家级别的内存优化策略&#10;- 提供AI训练中的内存泄漏检测与预防方案&#10;- 实现大型矩阵运算的内存优化技术&#10;- 介绍堆外内存在大模型推理中的应用&#10;- 提供分代GC在AI模型训练调优中的实践指导&#10;- 包含完整的代码示例和内存管理最佳实践">
+      <option name="closed" value="true" />
+      <created>1765457852483</created>
+      <option name="number" value="00004" />
+      <option name="presentableId" value="LOCAL-00004" />
+      <option name="project" value="LOCAL" />
+      <updated>1765457852483</updated>
+    </task>
+    <task id="LOCAL-00005" summary="chore(deps): 初始化Express应用并配置核心依赖&#10;&#10;- 添加Express应用初始化逻辑&#10;- 配置应用默认设置和中间件&#10;- 设置路由和请求处理流程&#10;- 添加模板引擎支持&#10;- 集成compression和cors模块&#10;- 配置excalidraw相关依赖&#10;- 添加面试模拟系统提示词文件">
+      <option name="closed" value="true" />
+      <created>1765457903294</created>
+      <option name="number" value="00005" />
+      <option name="presentableId" value="LOCAL-00005" />
+      <option name="project" value="LOCAL" />
+      <updated>1765457903294</updated>
+    </task>
+    <option name="localTasksCounter" value="6" />
     <servers />
   </component>
   <component name="TypeScriptGeneratedFilesManager">
@@ -177,6 +207,8 @@
     <MESSAGE value="feat(excalidraw): 初始化项目基础架构和核心渲染功能&#10;&#10;- 添加环境配置文件(.env.example)定义服务器端口、请求大小限制等参数&#10;- 创建.gitignore文件忽略node_modules、日志文件、IDE配置等不必要提交的内容&#10;- 编写API文档(API-DOCUMENTATION.md)详细说明服务使用方法和接口规范&#10;- 新增Docker配置(docker-compose.yml, Dockerfile)支持容器化部署&#10;- 实现Excalidraw数据渲染核心逻辑(src/excalidraw-renderer.js)&#10;- 提供示例图表文件(examples/diagram-with-shapes.json)用于测试验证&#10;- 配置字体资源和日志目录支持图表中文本渲染及运行日志记录&#10;- 设置健康检查和性能监控端点便于服务状态跟踪&#10;- 添加Postman集合配置方便接口调试和文档展示&#10;- 实现Redis缓存集成提升重复渲染请求的响应速度" />
     <MESSAGE value="feat(gpu): 初始化GPU内存评估项目基础架构&#10;&#10;- 添加.gitignore文件，配置忽略日志、node_modules、环境变量等文件&#10;- 创建React应用入口App.tsx，配置路由指向Home和Estimator页面&#10;- 添加CLAUDE.md开发指导文档，说明项目概述、命令、架构等信息&#10;- 定义通用类型接口(common.ts)，包括ApiResponse、PaginatedResponse等&#10;- 配置GPU计算常量(constants.ts)，包含精度字节、模型开销系数等&#10;- 实现数据格式化工具(formatters.ts)，支持内存、数字、价格等格式化&#10;- 添加全局样式文件(globals.css)，集成Tailwind和Ant Design样式&#10;- 定义GPU相关类型(gpu.ts)，包括GPUSpec、GPUCompatibility等接口&#10;- 构建GPU数据库(gpuDatabase.ts)，收录NVIDIA、AMD、Intel共20+款GPU规格&#10;- 提供GPU筛选和排序功能，支持按内存、性能、价格等条件查询" />
     <MESSAGE value="feat(gpu_memory): 更新主入口文件并配置路径别名&#10;&#10;- 将入口文件从 main.clean.tsx 更改为 main.tsx&#10;- 在 vite.config.ts 中添加路径别名配置&#10;- 支持 @ 符号开头的模块导入&#10;- 配置常用目录的快捷引用路径&#10;- 移除旧的测试用主文件引用" />
-    <option name="LAST_COMMIT_MESSAGE" value="feat(gpu_memory): 更新主入口文件并配置路径别名&#10;&#10;- 将入口文件从 main.clean.tsx 更改为 main.tsx&#10;- 在 vite.config.ts 中添加路径别名配置&#10;- 支持 @ 符号开头的模块导入&#10;- 配置常用目录的快捷引用路径&#10;- 移除旧的测试用主文件引用" />
+    <MESSAGE value="feat(ai): 添加JVM内存管理在AI模型训练中的应用文档&#10;&#10;- 新增120道JVM与AI性能优化相关面试题&#10;- 包含基础、进阶、专家级别的内存优化策略&#10;- 提供AI训练中的内存泄漏检测与预防方案&#10;- 实现大型矩阵运算的内存优化技术&#10;- 介绍堆外内存在大模型推理中的应用&#10;- 提供分代GC在AI模型训练调优中的实践指导&#10;- 包含完整的代码示例和内存管理最佳实践" />
+    <MESSAGE value="chore(deps): 初始化Express应用并配置核心依赖&#10;&#10;- 添加Express应用初始化逻辑&#10;- 配置应用默认设置和中间件&#10;- 设置路由和请求处理流程&#10;- 添加模板引擎支持&#10;- 集成compression和cors模块&#10;- 配置excalidraw相关依赖&#10;- 添加面试模拟系统提示词文件" />
+    <option name="LAST_COMMIT_MESSAGE" value="chore(deps): 初始化Express应用并配置核心依赖&#10;&#10;- 添加Express应用初始化逻辑&#10;- 配置应用默认设置和中间件&#10;- 设置路由和请求处理流程&#10;- 添加模板引擎支持&#10;- 集成compression和cors模块&#10;- 配置excalidraw相关依赖&#10;- 添加面试模拟系统提示词文件" />
   </component>
 </project>
