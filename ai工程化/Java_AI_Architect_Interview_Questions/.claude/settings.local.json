@@ -2,7 +2,8 @@
   "permissions": {
     "allow": [
       "mcp__web-search-prime__webSearchPrime",
-      "Bash(mkdir:*)"
+      "Bash(mkdir:*)",
+      "Bash(find:*)"
     ],
     "deny": [],
     "ask": []

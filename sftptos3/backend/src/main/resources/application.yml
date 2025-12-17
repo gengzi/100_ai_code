@@ -26,4 +26,18 @@ sftp:
   host: 0.0.0.0
   port: 2022
   host-key-file: ./hostkey.ser
-  # 后续将配置用户/权限/限流及 S3 目标绑定
+  temp-dir: ./data/tmp
+  temp-ttl: 4h
+  temp-quota-bytes: 10737418240 # 10GB
+  # TODO: later link to auth/limits/storage binding
+
+storage:
+  targets:
+    - name: default
+      region: us-east-1
+      endpoint: http://localhost:9000
+      path-style: true
+      access-key: minioadmin
+      secret-key: minioadmin
+      bucket: test-bucket
+      base-prefix: ""
