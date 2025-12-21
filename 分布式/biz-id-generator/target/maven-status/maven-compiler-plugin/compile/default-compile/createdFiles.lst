@@ -1,0 +1,13 @@
+com\example\bizid\ExampleMain$1.class
+com\example\bizid\repo\JdbcIdAllocRepository.class
+com\example\bizid\format\BizIdFormatter$Builder.class
+com\example\bizid\segment\SegmentBuffer$Range.class
+com\example\bizid\repo\Segment.class
+com\example\bizid\repo\IdAllocRepository.class
+com\example\bizid\ExampleMain.class
+com\example\bizid\format\BizIdFormatter.class
+com\example\bizid\repo\JdbcIdAllocRepository$Row.class
+com\example\bizid\segment\SegmentIdGenerator$Builder.class
+com\example\bizid\segment\SegmentBuffer.class
+com\example\bizid\segment\SegmentIdGenerator.class
+com\example\bizid\BizIdService.class

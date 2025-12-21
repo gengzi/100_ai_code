@@ -1,0 +1,5 @@
+com\example\bizid\repo\JdbcIdAllocRepositoryTest.class
+com\example\bizid\TestDataSources$1.class
+com\example\bizid\TestDataSources.class
+com\example\bizid\BizIdServiceTest.class
+com\example\bizid\segment\SegmentIdGeneratorTest.class

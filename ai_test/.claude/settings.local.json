@@ -1,0 +1,20 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(inotifywait:*)",
+      "Bash(while read file event)",
+      "Bash(done:*)",
+      "Bash(xargs:*)",
+      "Bash(npx tsc:*)",
+      "Bash(npm ls:*)",
+      "Bash(npm install:*)",
+      "Bash(npm run build)",
+      "Bash(npm run dev:*)",
+      "mcp__web-search-prime__webSearchPrime",
+      "mcp__web-reader__webReader",
+      "Bash(npm test:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

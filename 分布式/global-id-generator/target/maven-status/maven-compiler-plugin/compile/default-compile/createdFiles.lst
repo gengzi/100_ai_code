@@ -1,0 +1,14 @@
+com\example\id\MachineBasedWorkerIdAssigner.class
+com\example\id\SystemTimeSource.class
+com\example\id\IdGenerator.class
+com\example\id\SnowflakeOptions.class
+com\example\id\ClockMovedBackwardsException.class
+com\example\id\WorkerIdAssigner.class
+com\example\id\ExampleMain.class
+com\example\id\StaticWorkerIdAssigner.class
+com\example\id\Base62.class
+com\example\id\IdCodec.class
+com\example\id\SnowflakeIdGenerator.class
+com\example\id\WorkerId.class
+com\example\id\SnowflakeOptions$Builder.class
+com\example\id\TimeSource.class
