@@ -1,0 +1,43 @@
+spring:
+  application:
+    name: loan-report
+
+spring.cloud.sentinel:
+  transport:
+    dashboard: localhost:8858
+  eager: true
+  datasource:
+    flow:
+      nacos:
+        server-addr: localhost:8848
+        dataId: flow-loan-report.json
+        groupId: DEFAULT_GROUP
+        data-type: json
+        rule-type: flow
+    degrade:
+      nacos:
+        server-addr: localhost:8848
+        dataId: degrade-loan-report.json
+        groupId: DEFAULT_GROUP
+        data-type: json
+        rule-type: degrade
+
+dubbo:
+  application:
+    name: loan-report
+  protocol:
+    name: dubbo
+    port: -1
+  registry:
+    address: nacos://localhost:8848
+  consumer:
+    check: false
+  provider:
+    timeout: 3000
+
+feign:
+  client:
+    config:
+      default:
+        connectTimeout: 2000
+        readTimeout: 3000

@@ -1,0 +1,75 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: gateway
+  cloud:
+    gateway:
+      default-filters:
+        - AddRequestHeader=X-Request-Source,Gateway
+      routes:
+        - id: loan-user
+          uri: lb://loan-user
+          predicates:
+            - Path=/api/user/**
+          filters:
+            - StripPrefix=2
+        - id: loan-app
+          uri: lb://loan-app
+          predicates:
+            - Path=/api/app/**
+          filters:
+            - StripPrefix=2
+        - id: loan-order
+          uri: lb://loan-order
+          predicates:
+            - Path=/api/order/**
+          filters:
+            - StripPrefix=2
+        - id: loan-risk
+          uri: lb://loan-risk
+          predicates:
+            - Path=/api/risk/**
+          filters:
+            - StripPrefix=2
+        - id: loan-credit
+          uri: lb://loan-credit
+          predicates:
+            - Path=/api/credit/**
+          filters:
+            - StripPrefix=2
+        - id: loan-fund
+          uri: lb://loan-fund
+          predicates:
+            - Path=/api/fund/**
+          filters:
+            - StripPrefix=2
+        - id: loan-notify
+          uri: lb://loan-notify
+          predicates:
+            - Path=/api/notify/**
+          filters:
+            - StripPrefix=2
+        - id: loan-report
+          uri: lb://loan-report
+          predicates:
+            - Path=/api/report/**
+          filters:
+            - StripPrefix=2
+    sentinel:
+      scg:
+        enabled: true
+
+spring.cloud.sentinel:
+  transport:
+    dashboard: localhost:8858
+  eager: true
+  datasource:
+    flow:
+      nacos:
+        server-addr: localhost:8848
+        dataId: gw-flow-gateway.json
+        groupId: DEFAULT_GROUP
+        data-type: json
+        rule-type: gw-flow
