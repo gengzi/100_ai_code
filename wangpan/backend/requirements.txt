@@ -1,0 +1,25 @@
+# FastAPI和服务器
+fastapi>=0.104.0
+uvicorn[standard]>=0.24.0
+python-multipart>=0.0.6
+
+# HTTP客户端
+aiohttp>=3.9.0
+requests>=2.31.0
+
+# 数据验证
+pydantic>=2.5.0
+
+# f2 - 抖音/TikTok视频下载工具（核心依赖）
+f2[dy]>=0.0.1.6
+
+# 工具库
+python-dotenv>=1.0.0
+
+# 注意：f2会自动安装以下依赖
+# - aiofiles
+# - aiosqlite
+# - PyYAML
+# - httpx
+# - m3u8
+# 等等...

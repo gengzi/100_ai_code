@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "mcp__web-reader__webReader",
+      "Bash(tree:*)",
+      "Bash(dir:*)",
+      "Bash(findstr:*)",
+      "Bash(python:*)",
+      "mcp__web-search-prime__webSearchPrime",
+      "WebSearch"
+    ]
+  }
+}

@@ -1,0 +1,91 @@
+# F2配置文件示例
+# 将此文件复制到 ~/.f2/config.yaml 并根据需要修改
+
+# 抖音配置
+douyin:
+  # 请求配置
+  headers:
+    User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    Referer: "https://www.douyin.com/"
+    Cookie: "UIFID_TEMP=5a0fbbb49c6c57acd77ca86d66dd2e8e2f1fcf7b3fa6b8a56e480f684bd0858905ec3d4ec8e1f9d840959eb648c69c65bb16b1e54e958fcf23383cb0a30fb667b10511a181f9a1e22de5213587d0bf28; hevc_supported=true; bd_ticket_guard_client_web_domain=2; d_ticket=d48a0b02b929c237264501c0d31805ca9a569; UIFID=5a0fbbb49c6c57acd77ca86d66dd2e8e2f1fcf7b3fa6b8a56e480f684bd0858905ec3d4ec8e1f9d840959eb648c69c65927e5b39a191ed1461883ea9abe57a6eef574935243b6f4b43c926b57496d73d94b7e5f92ef94fb0c9245950f4aa8667b1bcf0f7be144cac71de8a507191643296ad036cc24cc58b50de42c47f10b9c43072d648ccd4b6fe6d42f61b3ac1605c0753c7a6f069090782dec69f34ebd411; passport_assist_user=Cj1M7-RxbDYgAar9V-ScyiXpucfl3yJCyb_ZsFPrffWI1wbxEZ-9-smz1-vkn-LQvf7G8pO0Uz4-ffBR-jbaGkoKPArHIJec9TGfWL01VoZe0f8IKcSb3ktqjzJUJeGqWlDMcbs8wnh9KItnQoVEvObX8dHplLWnJLneocSY7BDckuoNGImv1lQgASIBAyFquRs%3D; uid_tt=8ca6d819701fc21a3afafff1418d8f8f; uid_tt_ss=8ca6d819701fc21a3afafff1418d8f8f; sid_tt=bba2931fffc8a4cec6fe4b616cfa8a5b; sessionid=bba2931fffc8a4cec6fe4b616cfa8a5b; sessionid_ss=bba2931fffc8a4cec6fe4b616cfa8a5b; is_staff_user=false; store-region=cn-bj; store-region-src=uid; login_time=1740132773139; SelfTabRedDotControl=%5B%5D; live_use_vvc=%22false%22; SEARCH_RESULT_LIST_TYPE=%22single%22; enter_pc_once=1; my_rd=2; passport_csrf_token=87e8216b533661ba0812ad95dcdc763a; passport_csrf_token_default=87e8216b533661ba0812ad95dcdc763a; session_tlb_tag_bk=sttt%7C20%7Cu6KTH__IpM7G_kthbPqKW__________y-GpVNr4yiBuAvOthpR7IXDQd8WL_xjX1QJcKRLr9Ajw%3D; _bd_ticket_crypt_cookie=2c92bb4d8fc6878d1123b807e5d7b0b6; __live_version__=%221.1.4.4657%22; sid_guard=bba2931fffc8a4cec6fe4b616cfa8a5b%7C1767084550%7C5184000%7CSat%2C+28-Feb-2026+08%3A49%3A10+GMT; session_tlb_tag=sttt%7C13%7Cu6KTH__IpM7G_kthbPqKW__________BHR9let_Uly6uj-ExfzGRWQF7TYHjQ5c__lXZuFFjL4c%3D; sid_ucp_v1=1.0.0-KDQ4NDZiODc4OTgxZWQxYTllNmRiMDkzYjE1MGQ1M2NiZDM1NGY5YmMKHwjJ3O_zigMQhqTOygYY7zEgDDC7s-zeBTgHQPQHSAQaAmhsIiBiYmEyOTMxZmZmYzhhNGNlYzZmZTRiNjE2Y2ZhOGE1Yg; ssid_ucp_v1=1.0.0-KDQ4NDZiODc4OTgxZWQxYTllNmRiMDkzYjE1MGQ1M2NiZDM1NGY5YmMKHwjJ3O_zigMQhqTOygYY7zEgDDC7s-zeBTgHQPQHSAQaAmhsIiBiYmEyOTMxZmZmYzhhNGNlYzZmZTRiNjE2Y2ZhOGE1Yg; is_dash_user=1; strategyABtestKey=%221767978470.283%22; publish_badge_show_info=%221%2C0%2C0%2C1767978469843%22; __security_mc_1_s_sdk_crypt_sdk=0e73d0cd-4f1c-a1e8; __security_mc_1_s_sdk_cert_key=a21f8caf-4dc3-9fff; __security_mc_1_s_sdk_sign_data_key_web_protect=6c08d093-439e-9ee2; volume_info=%7B%22isUserMute%22%3Afalse%2C%22isMute%22%3Afalse%2C%22volume%22%3A0.6%7D; ttwid=1%7Cng9OrlCI_DWK5kfIJM4uMjgRuYwY2s380YmjQY08i9k%7C1767979717%7Cb70592ba7a6757f57407596b34f3e085cb50358bee086b520e4fb3b3f46f7e31; __druidClientInfo=JTdCJTIyY2xpZW50V2lkdGglMjIlM0E2NTYlMkMlMjJjbGllbnRIZWlnaHQlMjIlM0ExMjM3JTJDJTIyd2lkdGglMjIlM0E2NTYlMkMlMjJoZWlnaHQlMjIlM0ExMjM3JTJDJTIyZGV2aWNlUGl4ZWxSYXRpbyUyMiUzQTEuNSUyQyUyMnVzZXJBZ2VudCUyMiUzQSUyMk1vemlsbGElMkY1LjAlMjAoV2luZG93cyUyME5UJTIwMTAuMCUzQiUyMFdpbjY0JTNCJTIweDY0KSUyMEFwcGxlV2ViS2l0JTJGNTM3LjM2JTIwKEtIVE1MJTJDJTIwbGlrZSUyMEdlY2tvKSUyMENocm9tZSUyRjE0My4wLjAuMCUyMFNhZmFyaSUyRjUzNy4zNiUyMiU3RA==; FOLLOW_NUMBER_YELLOW_POINT_INFO=%22MS4wLjABAAAAr_W-rxd3-iuJmJY166G3qMS9jWegHkzES6b7msaX1KA%2F1768060800000%2F0%2F1768026534042%2F0%22; biz_trace_id=9f998988; playRecommendGuideTagCount=2; totalRecommendGuideTagCount=2; gulu_source_res=eyJwX2luIjoiMzRlYjBiNWI5YTNlY2RkMjY3ZGQzOTBkNjhjMjk1MGIzMjY2YmUyMDc3MWViYmZlMTIzNDM4ZDMxZmNkYTVjOCJ9; sdk_source_info=7e276470716a68645a606960273f276364697660272927676c715a6d6069756077273f276364697660272927666d776a68605a607d71606b766c6a6b5a7666776c7571273f275e58272927666a6b766a69605a696c6061273f27636469766027292762696a6764695a7364776c6467696076273f275e582729277672715a646971273f2763646976602729277f6b5a666475273f2763646976602729276d6a6e5a6b6a716c273f2763646976602729276c6b6f5a7f6367273f27636469766027292771273f27353d3c33323d3237353d333234272927676c715a75776a716a666a69273f2763646976602778; bit_env=OP_qewnNP3zxx2LZPMWi5PQaFT6W5dWbmCuX1A8-0u4zn3LtSu_lPrxmLGqQPETaNf5PFk2e_J8fQod_7xYFTRr8erC0GpJGYTM1DynJAzo_lMGKJqq9zdHfr2Wysjhp9_0M0f4DdnjgJw0WKmD1MstDakqdp0ar2xrvUklth_YWix-YlD_XhAzX9-GU2TvUPmO0NyMj_5KIff9WKRJeWg_ObA389nDs6pTPSZp8bFAQQ9c28EmwU1LuxYssLA44OQOcaIEaVwVAP0epGFGTHgtRHUqUCdeihlXSBXjFAKM5Vf8V-VZGF2agTtfJlzT3FFCRMP0qbv5qhSKShyYU0F5xkFhNlrxtbuCV68skQ-IIa0PkCpqsOIYPI6CzUdwUfsRcF9olHV9vYeH3vx6D1zYTXWfwgb-AHAk33KeCFmUletTtowPKNrjvD3EhoWpVj-N6ZL_3212FWNjV3NPlYZ-ycSIZuDxdiMb3KSlPZH8CO8uZT4yQ57ijIo2tK50k; passport_auth_mix_state=h8y47ppe17nfrbmkih03qwlvlpumcjh8nf5kupyygef95p55; IsDouyinActive=true; stream_recommend_feed_params=%22%7B%5C%22cookie_enabled%5C%22%3Atrue%2C%5C%22screen_width%5C%22%3A2560%2C%5C%22screen_height%5C%22%3A1440%2C%5C%22browser_online%5C%22%3Atrue%2C%5C%22cpu_core_num%5C%22%3A20%2C%5C%22device_memory%5C%22%3A8%2C%5C%22downlink%5C%22%3A10%2C%5C%22effective_type%5C%22%3A%5C%224g%5C%22%2C%5C%22round_trip_time%5C%22%3A0%7D%22; bd_ticket_guard_client_data=eyJiZC10aWNrZXQtZ3VhcmQtdmVyc2lvbiI6MiwiYmQtdGlja2V0LWd1YXJkLWl0ZXJhdGlvbi12ZXJzaW9uIjoxLCJiZC10aWNrZXQtZ3VhcmQtcmVlLXB1YmxpYy1rZXkiOiJCSHBCSUZTdXM5eWYrRzFsSTRnTm00c09uYm83N1o1ZSszdXZDTFVucTJmb2dIS3FldE9laU5KN3EvS0NLbFdiZ1BiQ0FyeGJCNTVyKy9hdEdmODFkN1U9IiwiYmQtdGlja2V0LWd1YXJkLXdlYi12ZXJzaW9uIjoyfQ%3D%3D; FOLLOW_LIVE_POINT_INFO=%22MS4wLjABAAAAr_W-rxd3-iuJmJY166G3qMS9jWegHkzES6b7msaX1KA%2F1768060800000%2F0%2F1768028103318%2F0%22; bd_ticket_guard_client_data_v2=eyJyZWVfcHVibGljX2tleSI6IkJIcEJJRlN1czl5ZitHMWxJNGdObTRzT25ibzc3WjVlKzN1dkNMVW5xMmZvZ0hLcWV0T2VpTko3cS9LQ0tsV2JnUGJDQXJ4YkI1NXIrL2F0R2Y4MWQ3VT0iLCJ0c19zaWduIjoidHMuMi5mZDg1OWNjNGYyNmYwNzI4ZGYxZDhhYWE0ZmVkZmYwZTBhZGNkOGQ5ZDk0NGE3YzY1ZjdkYTliNTVkYWM5YzA4YzRmYmU4N2QyMzE5Y2YwNTMxODYyNGNlZGExNDkxMWNhNDA2ZGVkYmViZWRkYjJlMzBmY2U4ZDRmYTAyNTc1ZCIsInJlcV9jb250ZW50Ijoic2VjX3RzIiwicmVxX3NpZ24iOiJIdEN3WFY2NmtkZVR0S2VwbEMvYXlrUU1OWlMzZG5oRzZDOEx2WGZBaDQ4PSIsInNlY190cyI6IiNxZWRRbFpzakt0cUNTbGZrWWtNb09jZTRVTWUxSkN6YkVuYTZZN3kvTEg2YjdtOEo0NmJhSEhmK0pyMlYifQ%3D%3D; odin_tt=971da53daa2f8ed9721e490ad1f20091e379d4d563891c4aea2b127e3fc1834c2a1f405fe1866ed4133a0d4cf11294e0229fe13ede177c3c238e72b54a33b3d3; home_can_add_dy_2_desktop=%221%22"  # 如果需要登录，请在此处填写Cookie
+
+  # 下载配置
+  download:
+    # 下载路径
+    path: "downloads"
+    # 文件命名模式
+    naming: "{create}_{desc}_{nickname}"  # create:创建时间 desc:描述 nickname:作者
+    # 分片下载线程数
+    chunk: 16
+    # 最大重试次数
+    max-retries: 3
+    # 下载超时时间（秒）
+    timeout: 60
+
+  # 参数配置
+  params:
+    # 设备信息
+    device_id: ""
+    # 安装包信息
+    install_id: ""
+    # 更新的时间戳
+    update_version_code: ""
+    # app版本
+    app_name: "douyin_android"
+    # 设备平台
+    device_platform: "android"
+    # 设备类型
+    device_type: "SM-G9810"
+    # os版本
+    os_version: "11"
+    # openudid
+    openudid: ""
+    # manifest_version_code
+    manifest_version_code: ""
+    # resolution
+    resolution: "1080*2400"
+    # dpi
+    dpi: "420"
+    # 渠道
+    channel: "googleplay"
+    # app版本
+    app_version: "260102"
+    # 版本号
+    version_code: "260102"
+    # 语言
+    language: "zh"
+    # ab调试版本
+    app_type: "normal"
+    # aid
+    aid: "1128"
+    # sdk版本
+    sdk_version: "2.3.8.4"
+    # 版本名称
+    version_name: "26.1.2"
+    # manifest版本号
+    manifest_version_name: "26.1.2"
+
+# TikTok配置
+tiktok:
+  headers:
+    User-Agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36"
+    Referer: "https://www.tiktok.com/"
+
+  download:
+    path: "downloads"
+    naming: "{create}_{desc}_{nickname}"
+    chunk: 16
+    max-retries: 3
+    timeout: 60
+
+# 通用配置
+common:
+  # 是否使用代理
+  proxy: null  # 例如: "http://127.0.0.1:7890"
+
+  # 日志级别
+  log-level: "INFO"
+
+  # 数据库配置
+  database:
+    path: "~/.f2/data/f2.db"

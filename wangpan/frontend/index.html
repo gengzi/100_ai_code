@@ -1,0 +1,162 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>抖音视频下载工具 - 自动上传百度网盘</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header class="header">
+            <h1>抖音视频下载工具</h1>
+            <p class="subtitle">支持批量下载、多清晰度选择、自动上传百度网盘</p>
+        </header>
+
+        <main class="main-content">
+            <!-- 视频链接输入区 -->
+            <section class="card">
+                <h2>
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M13.828 10.172a4 4 0 00-5.656 0l-4 4a4 4 0 105.656 5.656l1.102-1.101m-.758-4.899a4 4 0 005.656 0l4-4a4 4 0 00-5.656-5.656l-1.1 1.1" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    视频链接
+                </h2>
+                <textarea id="videoUrls" placeholder="粘贴抖音视频链接，支持批量输入（每行一个）&#10;示例：&#10;https://www.douyin.com/video/123456&#10;https://v.douyin.com/xxxxxx/" rows="6"></textarea>
+                <div class="input-footer">
+                    <span class="hint">支持多个链接，每行一个</span>
+                    <button class="clear-btn" onclick="clearInput()">清空</button>
+                </div>
+            </section>
+
+            <!-- 下载设置 -->
+            <section class="card">
+                <h2>
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                        <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    下载设置
+                </h2>
+
+                <div class="settings-grid">
+                    <!-- 视频清晰度 -->
+                    <div class="setting-group">
+                        <label class="setting-label">视频清晰度</label>
+                        <div class="radio-group">
+                            <label class="radio-label">
+                                <input type="radio" name="quality" value="1080p" checked>
+                                <span>1080P</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="quality" value="720p">
+                                <span>720P</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="quality" value="480p">
+                                <span>480P</span>
+                            </label>
+                            <label class="radio-label">
+                                <input type="radio" name="quality" value="360p">
+                                <span>360P</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 下载内容 -->
+                    <div class="setting-group">
+                        <label class="setting-label">下载内容</label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="downloadVideo" checked>
+                                <span>视频</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="downloadCover">
+                                <span>封面</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="downloadDescription">
+                                <span>文案</span>
+                            </label>
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="downloadAudio">
+                                <span>音频</span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- 格式转换 -->
+                    <div class="setting-group">
+                        <label class="setting-label">格式转换（可选）</label>
+                        <select id="formatConversion" class="select-input">
+                            <option value="none">不转换</option>
+                            <option value="mp4">MP4</option>
+                            <option value="avi">AVI</option>
+                            <option value="mov">MOV</option>
+                            <option value="separate">分离音频为独立文件</option>
+                        </select>
+                    </div>
+
+                    <!-- 百度网盘设置 -->
+                    <div class="setting-group highlight">
+                        <label class="setting-label">
+                            <svg class="icon-small" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                                <path d="M5 12.55a11 11 0 0114.08 0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                                <path d="M12 20v-6m0 0l-3 3m3-3l3 3" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                            </svg>
+                            百度网盘上传
+                        </label>
+                        <div class="checkbox-group">
+                            <label class="checkbox-label">
+                                <input type="checkbox" id="uploadToBaidu" checked>
+                                <span>下载后自动上传到百度网盘</span>
+                            </label>
+                        </div>
+                        <input type="text" id="baiduPath" class="text-input" placeholder="/我的视频/抖音视频" value="/抖音视频">
+                        <span class="hint">上传到百度网盘的目标路径</span>
+                    </div>
+                </div>
+            </section>
+
+            <!-- 操作按钮 -->
+            <div class="action-buttons">
+                <button class="btn btn-primary" onclick="startDownload()">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    开始下载
+                </button>
+                <button class="btn btn-secondary" onclick="checkProgress()">
+                    <svg class="btn-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    查看进度
+                </button>
+            </div>
+
+            <!-- 下载进度 -->
+            <section class="card" id="progressCard" style="display: none;">
+                <h2>
+                    <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor">
+                        <path d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+                    </svg>
+                    下载进度
+                </h2>
+                <div id="progressContent" class="progress-content">
+                    <!-- 动态插入进度信息 -->
+                </div>
+            </section>
+        </main>
+
+        <footer class="footer">
+            <p>支持批量下载、多清晰度选择、视频音频分离和本地文件管理</p>
+        </footer>
+    </div>
+
+    <!-- Toast 通知 -->
+    <div id="toast" class="toast"></div>
+
+    <script src="script.js"></script>
+</body>
+</html>
